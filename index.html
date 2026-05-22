@@ -306,7 +306,7 @@ function descargar(){
     doc.setFontSize(9.5);doc.setFont("helvetica","bold");doc.text("Nota: ",ml,y);doc.setFont("helvetica","normal");
     const nw=doc.getTextWidth("Nota: "),nl=doc.splitTextToSize("En caso de entrega física de este llamado de atención, se requiere la firma de recibido del aprendiz.",cw-nw);
     doc.text(nl[0],ml+nw,y);for(let i=1;i<nl.length;i++){y+=4.5;doc.text(nl[i],ml,y);}y+=10;
-    doc.setFontSize(10.5);doc.text("Firma de Recibido del Aprendiz: _______________________________",ml,y);
+    doc.setFontSize(10.5);doc.text(" ",ml,y);
     doc.setDrawColor(180,180,180);doc.setLineWidth(0.3);doc.line(ml,285,W-mr,285);
     doc.setFontSize(7.5);doc.setTextColor(130,130,130);
     doc.text("SENA — Centro Nacional Colombo Alemán  ·  Documento generado: "+new Date().toLocaleDateString("es-CO"),W/2,289,{align:"center"});
