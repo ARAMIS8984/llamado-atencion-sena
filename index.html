@@ -234,8 +234,7 @@ function buildPrev(){
     <div class="db">
       ${row("CIUDAD Y FECHA:",ci+", "+fe)}
       </div>
-      
-      </div>`
+      </div>
       ${row("APRENDIZ:",n)}
       ${row("PROGRAMA DE FORMACIÓN:",pr)}
       ${row("FICHA:",fi)}
@@ -248,7 +247,7 @@ function buildPrev(){
           fsel==="comportamiento"?`A través de la presente, nos permitimos informarle que, de acuerdo con el seguimiento realizado a su proceso formativo, se ha identificado una falta disciplinaria relacionada con el <b>${f.ar}</b>, el cual ${f.at}`:
           (fsel==="respeto"||fsel==="uniforme")?f.ft(""):
           `A través de la presente, nos permitimos informarle que, de acuerdo con el seguimiento realizado a su proceso formativo, se ha identificado una falta disciplinaria relacionada con el <b>${f.ar}</b> del Reglamento del Aprendiz SENA. Dicho artículo establece que ${f.at} ${f.ft("")}`
-        ):""}</p>
+        ):""}</p
         ${fsel!=="inasistencia"&&de?`<p>${de}</p>`:""}
         <p>Este llamado de atención se realiza con base en el <b>Artículo 46 (Tipos de medidas formativas) del Acuerdo 0009 de 2024</b>, el cual establece que el primer llamado de atención tiene un carácter preventivo, orientado a evitar el abandono del proceso formativo y garantizar su avance académico. De lo contrario, se procederá con el segundo llamado de atención.</p>
         <p>Atentamente,</p>
