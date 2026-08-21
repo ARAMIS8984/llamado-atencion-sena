@@ -1596,8 +1596,22 @@ function generarPlanPDF(){
   doc2.save('Plan_Mejoramiento_Academico_'+(pv('p-nombre').replace(/\s+/g,'_')||'aprendiz')+'.pdf');
 }
 
-
-
+// Acceso directo desde AulaSENA: ?ir=llamados | plan-academico | plan-disciplinario
+(function(){
+  var parametros = new URLSearchParams(window.location.search);
+  var ir = parametros.get('ir');
+  if(!ir) return;
+  window.addEventListener('DOMContentLoaded', function(){
+    if(ir === 'llamados'){
+      abrirHerramienta('llamados');
+    } else if(ir === 'plan-academico'){
+      abrirHerramienta('planes');
+      abrirSubherramienta('plan-academico');
+    } else if(ir === 'plan-disciplinario'){
+      abrirHerramienta('planes');
+    }
+  });
+})();
 
 </script>
 
