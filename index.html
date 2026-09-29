@@ -1219,8 +1219,31 @@ window.addEventListener('load', ()=>{
 <div class="herramienta" id="h-plan-disciplinario">
  <div class="container">
   <div class="card">
+   <h2>Cargar Reporte de Juicios Evaluativos</h2>
+   <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
+    Carga el archivo <strong>.xls</strong> del Reporte de Juicios Evaluativos para autocompletar la ficha, el programa y los datos del aprendiz. También puedes llenar el formulario manualmente.
+   </p>
+   <div id="d-drop-zone" style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all 0.15s;"
+    onclick="document.getElementById('d-input-reporte').click()"
+    ondragover="event.preventDefault();this.style.borderColor='var(--green)'"
+    ondragleave="this.style.borderColor='var(--border)'"
+    ondrop="event.preventDefault();this.style.borderColor='var(--border)';procesarReporteDisc(event.dataTransfer.files[0])">
+    <p style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">Toca o arrastra el archivo aquí</p>
+    <p style="font-size:12px;color:var(--muted);">Formato: .xls — Reporte de Juicios Evaluativos</p>
+    <input type="file" id="d-input-reporte" accept=".xls,.xlsx" style="display:none" onchange="procesarReporteDisc(this.files[0])">
+   </div>
+   <div id="d-reporte-status" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px;"></div>
+  </div>
+
+  <div class="card">
    <h2>Datos del aprendiz</h2>
    <div class="grid2">
+    <div class="field full" id="d-campo-selector" style="display:none;">
+     <label>Seleccionar aprendiz del reporte</label>
+     <select id="d-selector-aprendiz" onchange="seleccionarAprendizDisc(this.value)">
+      <option value="">Seleccionar aprendiz...</option>
+     </select>
+    </div>
     <div class="field full"><label>Nombre completo del aprendiz</label>
      <input type="text" id="d-nombre" placeholder="Ej: LUKAS VILLALOBOS BENAVIDES" oninput="this.value=this.value.replace(/[0-9]/g,'').toUpperCase()"></div>
     <div class="field"><label>Tipo de documento</label>
@@ -4564,6 +4587,95 @@ function generarActaDisciplinariaPDF(V){
   }
   doc.setTextColor(0,0,0);
   return doc;
+}
+
+// ── Reporte de Juicios Evaluativos para el plan disciplinario ──
+let reporteDisc = { aprendices: [] };
+function leerReporteJuicios(data){
+ const wb = XLSX.read(data, {type:'array'});
+ const ws = wb.Sheets[wb.SheetNames[0]];
+ const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+ let ficha = '', programa = '';
+ if(rows[2] && rows[2][2]) ficha = String(rows[2][2]).trim();
+ if(rows[5] && rows[5][2]) programa = String(rows[5][2]).trim();
+ if(!ficha || !programa){
+  rows.forEach(row => {
+   const lbl = String(row[0]||'').trim().toLowerCase();
+   if(lbl.includes('ficha de caracterizaci') && row[2]) ficha = String(row[2]).trim();
+   if(lbl.includes('denominaci') && row[2]) programa = String(row[2]).trim();
+  });
+ }
+ let headerRow = -1;
+ rows.forEach((row,i) => { if(String(row[0]||'').includes('Tipo de Documento')) headerRow = i; });
+ if(headerRow === -1) throw new Error('No se encontró la estructura esperada del reporte');
+ const mapa = {};
+ for(let i = headerRow+1; i < rows.length; i++){
+  const row = rows[i];
+  const estado = String(row[4]||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+  const doc = String(row[1]||'').trim();
+  if(estado === 'EN FORMACION' && doc && !mapa[doc]){
+   mapa[doc] = { doc, tipoDoc: String(row[0]||'').trim(),
+    nombre: (String(row[2]||'').trim()+' '+String(row[3]||'').trim()).replace(/\s+/g,' ').trim() };
+  }
+ }
+ const aprendices = Object.values(mapa).sort((a,b) => a.nombre.localeCompare(b.nombre,'es'));
+ return { ficha, programa, aprendices };
+}
+function tipoDocCorto(t){
+ const u = String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+ if(['TI','CC','CE','PPT'].includes(u)) return u;
+ if(u.includes('TARJETA')) return 'TI';
+ if(u.includes('EXTRANJER')) return 'CE';
+ if(u.includes('PERMISO') || u.includes('PPT') || u.includes('PROTECCION')) return 'PPT';
+ if(u.includes('CEDULA') || u.includes('CIUDADAN')) return 'CC';
+ return '';
+}
+function procesarReporteDisc(file){
+ if(!file) return;
+ const status = document.getElementById('d-reporte-status');
+ status.style.display = 'block'; status.style.background = '#fff8e1'; status.style.color = '#856404';
+ status.textContent = 'Procesando archivo...';
+ const reader = new FileReader();
+ reader.onload = e => {
+  try{
+   const r = leerReporteJuicios(new Uint8Array(e.target.result));
+   reporteDisc = r;
+   if(r.ficha) document.getElementById('d-ficha').value = r.ficha.replace(/[^0-9]/g,'');
+   if(r.programa){
+    const sel = document.getElementById('d-programa');
+    const progU = r.programa.toUpperCase();
+    let ok = false;
+    for(const opt of sel.options){
+     if(!opt.value) continue;
+     const claves = progU.split(' ').filter(p => p.length > 4);
+     if(claves.filter(p => opt.value.toUpperCase().includes(p)).length >= 2){ sel.value = opt.value; ok = true; break; }
+    }
+    if(!ok){ const o = document.createElement('option'); o.value = r.programa; o.textContent = r.programa; sel.appendChild(o); sel.value = r.programa; }
+   }
+   const selA = document.getElementById('d-selector-aprendiz');
+   selA.innerHTML = '<option value="">Seleccionar aprendiz...</option>' +
+    r.aprendices.map((a,i) => `<option value="${i}">${escHtml(a.nombre.toUpperCase())} — ${escHtml(a.doc)}</option>`).join('');
+   document.getElementById('d-campo-selector').style.display = 'block';
+   status.style.background = '#f0faf0'; status.style.color = 'var(--green-mid)';
+   status.textContent = `Reporte cargado: ficha ${r.ficha||'—'}, ${r.aprendices.length} aprendices en formación. Selecciona el aprendiz.`;
+   const dz = document.getElementById('d-drop-zone');
+   dz.style.borderColor = 'var(--green)';
+   dz.querySelector('p').textContent = 'Archivo cargado: ' + file.name;
+  } catch(err){
+   status.style.background = '#fff0f0'; status.style.color = '#c0392b';
+   status.textContent = 'Error al leer el archivo: ' + err.message;
+  }
+ };
+ reader.readAsArrayBuffer(file);
+}
+function seleccionarAprendizDisc(idx){
+ if(idx === '') return;
+ const a = reporteDisc.aprendices[parseInt(idx)];
+ if(!a) return;
+ document.getElementById('d-nombre').value = a.nombre.toUpperCase();
+ document.getElementById('d-documento').value = a.doc.replace(/[^0-9]/g,'');
+ const t = tipoDocCorto(a.tipoDoc);
+ if(t) document.getElementById('d-tipo-doc').value = t;
 }
 
 // ═══ PLAN DE MEJORAMIENTO DISCIPLINARIO — formulario ═══
