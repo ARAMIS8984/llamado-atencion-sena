@@ -170,6 +170,33 @@ window.addEventListener('load', ()=>{
  .coming-soon-container h2 { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
  .coming-soon-container p { font-size: 14px; color: var(--muted); }
 
+
+ /* ── Formulario Plan Disciplinario ── */
+ #h-plan-disciplinario .field { min-width: 0; }
+ #h-plan-disciplinario .field label { line-height: 1.35; }
+ #h-plan-disciplinario .field label .opc { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted); }
+ #h-plan-disciplinario input[type="time"] { font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; width: 100%; }
+ #h-plan-disciplinario input, #h-plan-disciplinario select, #h-plan-disciplinario textarea { min-width: 0; max-width: 100%; box-sizing: border-box; }
+ #h-plan-disciplinario .ayuda { font-size: 12px; color: var(--muted); line-height: 1.5; }
+ .d-plazo { display: flex; flex-wrap: wrap; gap: 10px; background: var(--green-light); border: 1px solid #c0dd97; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
+ .d-plazo > div { flex: 1 1 140px; min-width: 0; }
+ .d-plazo .t { font-size: 11px; font-weight: 600; color: var(--green-mid); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+ .d-plazo .v { font-size: 14px; font-weight: 600; color: var(--text); }
+ .d-act { border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; background: var(--bg); }
+ .d-act-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+ .d-act-num { font-size: 12px; font-weight: 700; color: var(--green-mid); background: var(--green-light); border-radius: 20px; padding: 3px 10px; }
+ .d-act-del { background: none; border: none; cursor: pointer; color: #c0392b; font-size: 13px; font-weight: 600; padding: 4px 6px; }
+ .d-modo { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 10px; }
+ .d-modo button { flex: 1 1 150px; padding: 9px 10px; border-radius: 8px; border: 1.5px solid var(--border); background: white; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); cursor: pointer; line-height: 1.3; }
+ .d-modo button.on { border-color: var(--green); background: var(--green-light); color: var(--green-mid); font-weight: 600; }
+ .d-fecha-info { font-size: 12px; margin-top: 6px; line-height: 1.4; }
+ .d-fecha-info.ok { color: var(--green-mid); }
+ .d-fecha-info.falta { color: #b9770e; }
+ @media (max-width: 560px){
+  #h-plan-disciplinario .grid2 { grid-template-columns: 1fr; }
+  #h-plan-disciplinario .card { padding: 16px; }
+  #h-plan-disciplinario .actions .btn { width: 100%; justify-content: center; }
+ }
 </style>
 </head>
 <body>
@@ -1262,13 +1289,13 @@ window.addEventListener('load', ()=>{
   <div class="card">
    <h2>Datos de la reunión</h2>
    <div class="grid2">
-    <div class="field"><label>Fecha (suscripción del plan)</label>
-     <input type="date" id="d-fecha" onchange="renderActividadesDisc()"></div>
-    <div class="field"><label>Acta No. <span style="font-weight:400;font-size:11px;color:var(--muted)">(opcional)</span></label>
+    <div class="field"><label>Fecha de la reunión y suscripción del plan</label>
+     <input type="date" id="d-fecha" onchange="cambioFechaDisc()"></div>
+    <div class="field"><label>Acta No. <span class="opc">(opcional)</span></label>
      <input type="text" id="d-acta" placeholder="Ej: 015"></div>
     <div class="field"><label>Hora de inicio</label>
      <input type="time" id="d-hora-inicio" value="07:30"></div>
-    <div class="field"><label>Hora de finalización <span style="font-weight:400;font-size:11px;color:var(--muted)">(opcional)</span></label>
+    <div class="field"><label>Hora de finalización <span class="opc">(opcional)</span></label>
      <input type="time" id="d-hora-fin"></div>
     <div class="field full"><label>Ambiente de formación</label>
      <input type="text" id="d-ambiente" placeholder="Ej: Diseño"></div>
@@ -1302,7 +1329,8 @@ window.addEventListener('load', ()=>{
 
   <div class="card">
    <h2>Actividades comportamentales</h2>
-   <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">Las fechas de entrega deben estar dentro de los 20 días calendario contados desde la fecha de la reunión.</p>
+   <div class="d-plazo" id="d-plazo"></div>
+   <p class="ayuda" style="margin-bottom:14px;">El instructor define la fecha de entrega de cada actividad dentro de este plazo. Si la actividad se cumple durante toda la formación (por ejemplo, la puntualidad), márcala como <strong>permanente</strong>.</p>
    <div id="d-actividades-lista"></div>
    <button class="btn btn-secondary" onclick="agregarActividadDisc()" style="margin-top:10px;">+ Agregar actividad</button>
   </div>
@@ -4698,37 +4726,77 @@ function initPlanDisciplinario(){
   const f = fd.value;
   actividadesDisc = [
    {desc:'Llegar 10 minutos antes a cada sesión para cumplir el Art. 8 del Reglamento', fecha:'', permanente:true},
-   {desc:'Entregar las evidencias de aprendizaje pendientes.', fecha:fechaISOmas(f,7), permanente:false},
-   {desc:'Presentar Informe de lectura sobre los Capítulos III y VIII del Acuerdo 0009 de 2024', fecha:fechaISOmas(f,7), permanente:false},
-   {desc:'Firmar Acta de compromiso de cambio actitudinal y participación activa.', fecha:f, permanente:false}
+   {desc:'Entregar las evidencias de aprendizaje pendientes.', fecha:'', permanente:false},
+   {desc:'Presentar Informe de lectura sobre los Capítulos III y VIII del Acuerdo 0009 de 2024', fecha:'', permanente:false},
+   {desc:'Firmar Acta de compromiso de cambio actitudinal y participación activa.', fecha:'', permanente:false}
   ];
  }
  renderActividadesDisc();
 }
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function fechaLargaDisc(iso){
+ if(!iso) return '';
+ const [y,m,d] = iso.split('-');
+ return parseInt(d)+' de '+MESES_DISC[parseInt(m)-1]+' de '+y;
+}
+function cambioFechaDisc(){
+ const ini = document.getElementById('d-fecha').value;
+ if(ini){
+  const fin = fechaISOmas(ini, 20);
+  actividadesDisc.forEach(a => { if(a.fecha && (a.fecha < ini || a.fecha > fin)) a.fecha = ''; });
+ }
+ renderActividadesDisc();
+}
+function pintarPlazoDisc(){
+ const el = document.getElementById('d-plazo');
+ if(!el) return;
+ const ini = document.getElementById('d-fecha').value;
+ if(!ini){ el.innerHTML = '<div><div class="t">Plazo del plan</div><div class="v">Indica primero la fecha de la reunión</div></div>'; return; }
+ el.innerHTML = `
+  <div><div class="t">Desde (suscripción)</div><div class="v">${fechaLargaDisc(ini)}</div></div>
+  <div><div class="t">Hasta (fecha límite)</div><div class="v">${fechaLargaDisc(fechaISOmas(ini,20))}</div></div>
+  <div><div class="t">Término</div><div class="v">20 días calendario</div></div>`;
+}
+function diaDelPlazo(ini, f){
+ return Math.round((new Date(f+'T12:00:00') - new Date(ini+'T12:00:00')) / 86400000);
+}
 function renderActividadesDisc(){
+ pintarPlazoDisc();
  const cont = document.getElementById('d-actividades-lista');
  if(!cont) return;
  const ini = document.getElementById('d-fecha').value;
  const fin = ini ? fechaISOmas(ini, 20) : '';
- cont.innerHTML = actividadesDisc.map((a,i)=>`
- <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;background:var(--bg);">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-   <span style="font-size:12px;font-weight:600;color:var(--muted);">ACTIVIDAD ${i+1}</span>
-   ${actividadesDisc.length>1?`<button onclick="eliminarActividadDisc(${i})" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:18px;">×</button>`:''}
+ cont.innerHTML = actividadesDisc.map((a,i)=>{
+  let info = '';
+  if(!a.permanente){
+   info = a.fecha
+    ? `<div class="d-fecha-info ok">Entrega: ${fechaLargaDisc(a.fecha)} — día ${diaDelPlazo(ini,a.fecha)} de 20</div>`
+    : `<div class="d-fecha-info falta">Falta definir la fecha de entrega.</div>`;
+  }
+  return `
+ <div class="d-act">
+  <div class="d-act-head">
+   <span class="d-act-num">Actividad ${i+1}</span>
+   ${actividadesDisc.length>1?`<button class="d-act-del" onclick="eliminarActividadDisc(${i})">Quitar</button>`:''}
   </div>
-  <div class="grid2">
-   <div class="field full"><label>Actividad</label>
-    <textarea style="min-height:60px;" onchange="actividadesDisc[${i}].desc=this.value">${escHtml(a.desc)}</textarea></div>
-   <div class="field"><label>Fecha de entrega</label>
-    <input type="date" min="${ini}" max="${fin}" value="${a.fecha||''}" ${a.permanente?'disabled':''} onchange="actividadesDisc[${i}].fecha=this.value"></div>
-   <div class="field" style="display:flex;align-items:flex-end;">
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;">
-     <input type="checkbox" ${a.permanente?'checked':''} onchange="actividadesDisc[${i}].permanente=this.checked;renderActividadesDisc()"> Permanente (en las jornadas formativas)
-    </label></div>
+  <div class="field">
+   <label>Descripción de la actividad</label>
+   <textarea style="min-height:64px;" oninput="actividadesDisc[${i}].desc=this.value" placeholder="Describe la actividad que debe cumplir el aprendiz...">${escHtml(a.desc)}</textarea>
   </div>
- </div>`).join('');
+  <div class="d-modo">
+   <button type="button" class="${a.permanente?'':'on'}" onclick="modoActividadDisc(${i},false)">Fecha específica de entrega</button>
+   <button type="button" class="${a.permanente?'on':''}" onclick="modoActividadDisc(${i},true)">Permanente (en las jornadas formativas)</button>
+  </div>
+  ${a.permanente ? `<p class="ayuda">Se cumple en cada sesión. En el acta aparece como <em>“En las jornadas formativas”</em>.</p>` : `
+  <div class="field">
+   <label>Fecha de entrega</label>
+   <input type="date" min="${ini}" max="${fin}" value="${a.fecha||''}" onchange="actividadesDisc[${i}].fecha=this.value;renderActividadesDisc()">
+   ${info}
+  </div>`}
+ </div>`;
+ }).join('');
 }
+function modoActividadDisc(i, perm){ actividadesDisc[i].permanente = perm; renderActividadesDisc(); }
 function agregarActividadDisc(){ actividadesDisc.push({desc:'', fecha:'', permanente:false}); renderActividadesDisc(); }
 function eliminarActividadDisc(i){ if(actividadesDisc.length>1){ actividadesDisc.splice(i,1); renderActividadesDisc(); } }
 
