@@ -1,4 +1,4 @@
-const CACHE_NAME = 'seguimiento-cnca-v1';
+const CACHE_NAME = 'seguimiento-cnca-v2';
 const ASSETS = [
   '/llamado-atencion-sena/',
   '/llamado-atencion-sena/index.html'
@@ -18,18 +18,17 @@ self.addEventListener('activate', e => {
   );
 });
 
+// Primero la red (siempre la versión más reciente); la caché solo si no hay conexión
 self.addEventListener('fetch', e => {
+  if(e.request.method !== 'GET') return;
   if(e.request.url.includes('supabase.co')) return;
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const network = fetch(e.request).then(res => {
-        if(res && res.status === 200 && res.type === 'basic'){
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-        }
-        return res;
-      }).catch(() => cached);
-      return cached || network;
-    })
+    fetch(e.request).then(res => {
+      if(res && res.status === 200 && res.type === 'basic'){
+        const clone = res.clone();
+        caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+      }
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });
