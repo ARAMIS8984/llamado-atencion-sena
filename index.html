@@ -5395,17 +5395,28 @@ async function fxAlIniciar(){
 function fxPintarTarjetaHome(){
  const grid = document.querySelector('#home .menu-grid');
  if(!grid) return;
- let card = document.getElementById('fx-card-home');
- if(!card){
-  card = document.createElement('div');
-  card.id = 'fx-card-home';
-  card.className = 'menu-card disponible';
-  card.onclick = () => fxAbrir(fxEsLider() || fxEsAdmin() ? 'cargar' : 'mias');
-  grid.insertBefore(card, grid.firstChild);
+ // Tarjeta para TODOS los instructores: asociar fichas a su proceso formativo
+ let mias = document.getElementById('fx-card-home');
+ if(!mias){
+  mias = document.createElement('div');
+  mias.id = 'fx-card-home';
+  mias.className = 'menu-card disponible';
+  mias.onclick = () => fxAbrir('mias');
+  grid.insertBefore(mias, grid.firstChild);
  }
- const lider = fxEsLider() || fxEsAdmin();
- card.innerHTML = `<div class="menu-info"><h3>${lider ? 'Fichas y aprendices' : 'Mis fichas'}</h3>
-  <p>${lider ? 'Carga los Reportes de Juicios de tu programa y asocia las fichas de tu horario' : 'Asocia a tu perfil las fichas de tu horario y consulta sus aprendices'}</p></div><span class="menu-arrow">›</span>`;
+ mias.innerHTML = `<div class="menu-info"><h3>Mis fichas</h3><p>Asocia a tu perfil las fichas de tu proceso formativo y consulta sus aprendices</p></div><span class="menu-arrow">›</span>`;
+ // Tarjeta adicional solo para líderes y administradores: cargar fichas del programa
+ let prog = document.getElementById('fx-card-programa');
+ if(fxEsLider() || fxEsAdmin()){
+  if(!prog){
+   prog = document.createElement('div');
+   prog.id = 'fx-card-programa';
+   prog.className = 'menu-card disponible';
+   prog.onclick = () => fxAbrir('cargar');
+   mias.after(prog);
+  }
+  prog.innerHTML = `<div class="menu-info"><h3>Fichas del programa</h3><p>Carga los Reportes de Juicios, pon el nombre del grupo y elimina fichas al cambiar de trimestre</p></div><span class="menu-arrow">›</span>`;
+ } else if(prog) prog.remove();
 }
 function fxPintarBotonAdmin(){
  if(!fxEsAdmin() || document.getElementById('fx-btn-admin')) return;
@@ -5418,6 +5429,13 @@ function fxPintarBotonAdmin(){
  b.style.cssText = 'background:#fff;border:none;border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;text-align:left;width:100%;';
  b.innerHTML = `<span style="font-size:24px;"></span><div style="flex:1;"><div style="font-size:15px;font-weight:600;color:#1a1a1a;">Líderes y fichas</div><div style="font-size:12px;color:#666;">Designar líderes por programa, cargar y eliminar fichas</div></div><span style="color:#1565c0;font-size:18px;">›</span>`;
  ref.parentNode.insertBefore(b, ref);
+ const m = document.createElement('button');
+ m.id = 'fx-btn-admin-mias';
+ m.className = 'adm-opt';
+ m.onclick = () => fxAbrir('mias');
+ m.style.cssText = b.style.cssText;
+ m.innerHTML = `<span style="font-size:24px;"></span><div style="flex:1;"><div style="font-size:15px;font-weight:600;color:#1a1a1a;">Mis fichas</div><div style="font-size:12px;color:#666;">Asociar las fichas de mi proceso formativo</div></div><span style="color:#1565c0;font-size:18px;">›</span>`;
+ ref.parentNode.insertBefore(m, b);
 }
 
 // ── Vista principal ──
@@ -5485,7 +5503,7 @@ async function fxRenderMias(){
   if(!mias.length){
    body.innerHTML = `<div class="fx-card fx-vacio">
     <h3>Todavía no tienes fichas asociadas</h3>
-    <p>Asocia a tu perfil las fichas que tienes en tu horario. Así podrás consultar sus aprendices y, más adelante, tomar asistencia.</p>
+    <p>Asocia a tu perfil las fichas de tu proceso formativo. Así podrás consultar sus aprendices y, más adelante, tomar asistencia.</p>
     <button type="button" class="fx-btn fx-btn-p" onclick="fxAbrirAsociar()">Asociar fichas a mi perfil</button></div>`;
    return;
   }
