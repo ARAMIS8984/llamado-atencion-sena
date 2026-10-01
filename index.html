@@ -5306,7 +5306,7 @@ aplicarVista();
 .fx-chip button{border:none;background:rgba(0,0,0,.08);border-radius:50%;width:18px;height:18px;line-height:18px;padding:0;cursor:pointer;color:#27500A;font-size:12px;}
 .fx-hoja{display:none;position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center;}
 .fx-hoja.abierta{display:flex;}
-.fx-hoja-in{background:#fff;width:100%;max-width:720px;max-height:88vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column;}
+.fx-hoja-in{background:#fff;width:100%;max-width:720px;max-height:88vh;min-height:60vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column;}
 .fx-hoja-cab{padding:14px 16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
 .fx-hoja-cuerpo{padding:12px 16px 24px;overflow-y:auto;}
 .fx-apr{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f0f0f0;}
@@ -5527,27 +5527,42 @@ async function fxDesasociar(fid){
 // ── Asociar fichas (hoja inferior) ──
 let fxTodasParaAsociar = [];
 async function fxAbrirAsociar(){
- fxAbrirHoja('<b>Asociar fichas a mi perfil</b><div class="fx-muted">Toca una ficha para asociarla o quitarla</div>',
-  '<div class="fx-muted" style="padding:14px;text-align:center;">Cargando fichas...</div>');
+ FX.asocProg = null;
+ fxAbrirHoja('<b>Asociar fichas a mi perfil</b><div class="fx-muted" id="fx-asocsub">Elige el programa de formación</div>',
+  '<div class="fx-muted" style="padding:14px;text-align:center;">Cargando...</div>');
  try{
   await fxTraerMias();
   fxTodasParaAsociar = await fxTraerFichas();
-  if(!fxTodasParaAsociar.length){
-   document.getElementById('fx-hoja-cuerpo').innerHTML = '<div class="fx-aviso">Aún no hay fichas cargadas en la plataforma. Los líderes de cada programa son quienes las cargan desde el Reporte de Juicios Evaluativos.</div>';
-   return;
-  }
-  document.getElementById('fx-hoja-cuerpo').innerHTML = `<input class="fx-input" id="fx-buscar-asoc" placeholder="Buscar por ficha, grupo o programa" oninput="fxPintarAsociar()"><div id="fx-lista-asoc"></div>`;
   fxPintarAsociar();
  }catch(e){ document.getElementById('fx-hoja-cuerpo').innerHTML = `<div class="fx-aviso fx-err">${fxEsc(e.message)}</div>`; }
 }
+function fxElegirProgAsoc(i){ FX.asocProg = (i===null) ? null : FX.programas[i]; fxPintarAsociar(); document.getElementById('fx-hoja-cuerpo').scrollTop = 0; }
 function fxPintarAsociar(){
- const q = fxNorm((document.getElementById('fx-buscar-asoc')||{}).value||'');
- const fs = fxTodasParaAsociar.filter(f => !q || fxNorm(f.numero+' '+(f.grupo||'')+' '+f.programa).includes(q));
- document.getElementById('fx-lista-asoc').innerHTML = fs.length ? fxAgrupar(fs).map(([p, lista]) => `<div class="fx-grupo"><span>${fxEsc(p)}</span></div>` + lista.map(f => {
+ const cuerpo = document.getElementById('fx-hoja-cuerpo');
+ const sub = document.getElementById('fx-asocsub');
+ // Paso 1: todos los programas de formación
+ if(!FX.asocProg){
+  if(sub) sub.textContent = 'Elige el programa de formación';
+  cuerpo.innerHTML = FX.programas.map((p,i) => {
+   const fs = fxTodasParaAsociar.filter(f => f.programa===p);
+   const mias = fs.filter(f => FX.misFichas.has(f.id)).length;
+   return `<div class="fx-ficha" style="cursor:pointer;" onclick="fxElegirProgAsoc(${i})">
+     <div class="fx-ficha-info"><div style="font-weight:600;font-size:14px;">${fxEsc(p)}</div>
+     <div class="fx-muted">${fs.length ? fs.length+' ficha'+(fs.length!==1?'s':'') : 'Sin fichas cargadas'}${mias?` · <span class="fx-pill">${mias} asociada${mias!==1?'s':''}</span>`:''}</div></div>
+     <span style="color:#27500A;font-size:20px;">›</span></div>`;
+  }).join('');
+  return;
+ }
+ // Paso 2: fichas del programa elegido
+ const p = FX.asocProg;
+ const fs = fxTodasParaAsociar.filter(f => f.programa===p);
+ if(sub) sub.textContent = p;
+ cuerpo.innerHTML = `<button type="button" class="fx-btn fx-btn-s fx-btn-sm" style="margin-bottom:10px;" onclick="fxElegirProgAsoc(null)">← Programas</button>` +
+  (fs.length ? fs.map(f => {
    const on = FX.misFichas.has(f.id);
    return `<div class="fx-ficha"><div class="fx-ficha-info"><div class="fx-ficha-num">${fxEtiqueta(f)}</div><div class="fx-muted">${f.nApr} aprendices · ${f.nIns} instructor${f.nIns!==1?'es':''} asociado${f.nIns!==1?'s':''}</div></div>
     <button type="button" id="fx-asoc-${f.id}" class="fx-btn fx-btn-sm ${on?'fx-btn-p':'fx-btn-s'}" onclick="fxToggleAsociar('${f.id}')">${on?'✓ Asociada':'Asociar'}</button></div>`;
-  }).join('')).join('') : '<div class="fx-muted" style="padding:14px;text-align:center;">No hay fichas que coincidan.</div>';
+  }).join('') : '<div class="fx-aviso">Este programa todavía no tiene fichas cargadas. Las carga el líder del programa desde el Reporte de Juicios Evaluativos.</div>');
 }
 async function fxToggleAsociar(fid){
  const b = document.getElementById('fx-asoc-'+fid);
