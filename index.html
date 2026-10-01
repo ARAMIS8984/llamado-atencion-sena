@@ -964,6 +964,15 @@ window.addEventListener('load', ()=>{
 
  </div>
  </div>
+ <div class="card" id="card-recs-disc" style="display:none;">
+ <h2>Recomendaciones de mejoramiento disciplinario</h2>
+ <p style="font-size:12px;color:var(--muted);margin:-4px 0 12px;line-height:1.5;">Se cargan según la falta seleccionada. Puedes editarlas, eliminarlas o agregar otras; así saldrán en el segundo llamado.</p>
+ <div id="lista-recs-disc"></div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+  <button type="button" class="btn btn-secondary" style="padding:8px 14px;font-size:13px;" onclick="agregarRecDisc()">+ Agregar recomendación</button>
+  <button type="button" class="btn btn-secondary" style="padding:8px 14px;font-size:13px;" onclick="restablecerRecsDisc()">Restablecer las de esta falta</button>
+ </div>
+ </div>
  <div class="actions">
  <button class="btn btn-secondary" onclick="goTo(5)">← Anterior</button>
  <button class="btn btn-primary" onclick="goTo(7)">Revisar y generar →</button>
@@ -1678,6 +1687,110 @@ const TEXTOS_LLAMADO = {
 
 function selectTipo(t){tipoLlamado=t;document.querySelectorAll('[id^="tc-"]').forEach(c=>c.classList.remove('selected'));document.getElementById('tc-'+t).classList.add('selected');setTimeout(()=>goTo(4),300);}
 function selectNumero(n){numeroLlamado=n;document.querySelectorAll('[id^="nc-"]').forEach(c=>c.classList.remove('selected'));document.getElementById('nc-'+n).classList.add('selected');setTimeout(()=>goTo(5),300);}
+// ── Recomendaciones de mejoramiento disciplinario (segundo llamado), según la falta ──
+const RECS_DISC_GENERAL = [
+ 'Cumplir estrictamente con el horario establecido para las actividades de formación.',
+ 'Justificar oportunamente cualquier inasistencia, presentando los soportes correspondientes cuando aplique.',
+ 'Mantener una asistencia permanente y participación activa en las actividades académicas programadas.',
+ 'Atender las orientaciones y recomendaciones impartidas por los instructores y demás integrantes del equipo ejecutor.',
+ 'Realizar seguimiento periódico a su proceso formativo y adoptar acciones que contribuyan al mejoramiento de su desempeño y comportamiento.'
+];
+const RECS_DISC_POR_FALTA = {
+ actividades_sena: [
+  'Asistir puntualmente y participar de manera activa en todas las actividades programadas por el SENA, tanto en las de formación como en las complementarias.',
+  'Consultar con frecuencia los canales oficiales de comunicación (plataforma, correo institucional y grupos del programa) para conocer oportunamente la programación de actividades.',
+  'Organizar su tiempo de manera responsable, con apoyo de un cronograma personal o una agenda, para cumplir con sus compromisos académicos e institucionales.',
+  'Informar oportunamente al instructor o al Equipo Ejecutor cualquier situación que le impida asistir o cumplir con una actividad, y presentar los soportes que justifiquen la inasistencia dentro de los plazos establecidos.',
+  'Recuperar las actividades pendientes en los tiempos y condiciones que defina el instructor.'
+ ],
+ principios: [
+  'Conocer, apropiar y aplicar en su actuar diario los principios y valores institucionales del SENA, así como los establecidos en el Código de Integridad.',
+  'Mantener un trato respetuoso, cordial y tolerante con instructores, compañeros, funcionarios y demás miembros de la comunidad educativa, tanto en los ambientes de formación como en los espacios virtuales.',
+  'Actuar con honestidad, responsabilidad y compromiso en todas las actividades de su proceso formativo.',
+  'Resolver las diferencias o conflictos a través del diálogo y los canales institucionales establecidos, evitando conductas o expresiones que afecten la convivencia.',
+  'Hacer buen uso de las instalaciones, los equipos, los materiales y el nombre del SENA, cuidando la imagen institucional dentro y fuera del centro de formación.',
+  'Reflexionar sobre la situación presentada y asumir una actitud de cambio que se refleje en su comportamiento durante el resto del proceso formativo.',
+  'Participar en las actividades de orientación y acompañamiento que ofrezca el área de Bienestar al Aprendiz para fortalecer sus habilidades socioemocionales y de convivencia.'
+ ],
+ bienes: [
+  'Hacer uso adecuado y responsable de las instalaciones, los equipos, las herramientas, el mobiliario y los materiales del SENA, empleándolos únicamente para los fines formativos establecidos.',
+  'Seguir las instrucciones del instructor y los protocolos de uso, seguridad y manipulación de equipos y herramientas en los ambientes de formación.',
+  'Informar de inmediato al instructor o al responsable del ambiente cualquier daño, falla o anomalía que detecte en los bienes institucionales, aunque no la haya ocasionado.',
+  'Contribuir al cuidado y la conservación de los bienes del SENA, entendiendo que son recursos públicos destinados a la formación de todos los aprendices.',
+  'Reflexionar sobre la situación presentada y asumir una actitud de responsabilidad y cambio frente al cuidado de los bienes durante el resto de su proceso formativo.'
+ ],
+ plataformas: [
+  'Utilizar las plataformas virtuales institucionales (plataforma de formación, correo institucional y demás herramientas del SENA) únicamente para fines académicos y relacionados con su proceso formativo.',
+  'Mantener una comunicación respetuosa y cordial en foros, chats, correos y demás espacios virtuales, evitando expresiones ofensivas, burlas o contenido que afecte a otros miembros de la comunidad educativa.',
+  'Abstenerse de publicar, compartir o descargar contenido inapropiado, ajeno a la formación o que vulnere los derechos de terceros.',
+  'Proteger sus credenciales de acceso, sin compartir su usuario ni su contraseña, y responder por las acciones realizadas desde su cuenta.',
+  'Respetar la información personal de compañeros, instructores y funcionarios, sin divulgarla ni utilizarla sin autorización.',
+  'Presentar trabajos y evidencias de su propia autoría, citando adecuadamente las fuentes consultadas y evitando el plagio o la copia.',
+  'Conocer y cumplir las normas de uso de las plataformas institucionales y las disposiciones del Reglamento del Aprendiz SENA relacionadas con el comportamiento en ambientes virtuales.'
+ ],
+ impuntualidad: [
+  'Llegar puntualmente a las sesiones de formación y permanecer en el ambiente durante toda la jornada establecida.',
+  'Planificar con anticipación sus desplazamientos, considerando posibles dificultades de transporte, tráfico o clima, para asegurar su llegada a tiempo.',
+  'Organizar su tiempo de manera responsable, mediante una agenda o rutina que le permita cumplir con sus compromisos de formación.',
+  'Informar oportunamente al instructor cuando, por una situación de fuerza mayor, no pueda llegar a la hora establecida, y presentar los soportes que lo justifiquen.',
+  'Reconocer que la puntualidad es una muestra de respeto hacia el instructor y los compañeros, y una competencia fundamental para su futuro desempeño laboral.',
+  'Ponerse al día con los temas y actividades desarrollados durante el tiempo de retraso, sin interrumpir el normal desarrollo de la sesión.'
+ ],
+ omision: [
+  'Reportar de manera oportuna al instructor, al Equipo Ejecutor o a la coordinación académica cualquier novedad que afecte su proceso formativo, como inasistencias, incapacidades, calamidades, cambios de horario laboral o situaciones personales relevantes.',
+  'Tramitar dentro de los plazos establecidos las novedades formales a que haya lugar, como aplazamiento, traslado, retiro voluntario o reingreso, siguiendo los procedimientos definidos por el Centro de Formación.',
+  'Presentar los soportes que justifiquen las novedades reportadas, como incapacidades médicas, certificados o constancias, dentro de los términos establecidos.',
+  'Mantener actualizados sus datos personales y de contacto en los sistemas de información del SENA, garantizando la veracidad de la información.',
+  'En etapa productiva, informar oportunamente cualquier cambio en su vinculación, como la terminación o suspensión del contrato, el cambio de empresa o de funciones.',
+  'Utilizar los canales oficiales de comunicación (correo institucional y plataforma de formación) para reportar novedades, de modo que quede constancia escrita.',
+  'Conocer los tipos de novedades y los procedimientos para reportarlas, consultando el Reglamento del Aprendiz o al Equipo Ejecutor cuando tenga dudas.'
+ ],
+ ambientes: [
+  'Hacer uso adecuado de los ambientes de formación y de sus componentes (equipos, herramientas, mobiliario, recursos tecnológicos y materiales), empleándolos únicamente para los fines formativos establecidos.',
+  'Cumplir las normas de uso, seguridad y convivencia definidas para cada ambiente, así como las instrucciones del instructor o del responsable del espacio.',
+  'Abstenerse de consumir alimentos o bebidas en los ambientes donde no esté permitido, en especial cerca de equipos de cómputo, maquinaria o laboratorios.',
+  'No manipular, trasladar, desconectar ni modificar equipos, herramientas o su configuración (incluida la instalación de software) sin autorización del instructor.',
+  'Mantener el orden y el aseo del ambiente, dejando el puesto de trabajo, los equipos y los materiales en las condiciones en que los recibió al finalizar cada sesión.',
+  'Utilizar los elementos de protección personal requeridos y seguir los protocolos de seguridad en los ambientes que así lo exijan.',
+  'Informar de inmediato al instructor cualquier falla, daño o uso indebido que detecte en el ambiente o en sus componentes.',
+  'Reconocer que los ambientes de formación son recursos públicos compartidos, cuyo cuidado garantiza la calidad de la formación de todos los aprendices.'
+ ],
+ epp: [
+  'Conocer y cumplir las normas de seguridad y salud en el trabajo establecidas por el SENA para los ambientes de formación, talleres, laboratorios y escenarios de práctica.',
+  'Portar y utilizar de manera correcta y permanente los elementos de protección personal (EPP) requeridos para cada actividad, y mantenerlos en buen estado.',
+  'Seguir las instrucciones del instructor y los procedimientos seguros de trabajo antes de operar equipos, máquinas, herramientas o sustancias.',
+  'Abstenerse de realizar actividades para las cuales no ha recibido la instrucción o la autorización correspondiente.',
+  'Respetar la señalización, las áreas restringidas, las rutas de evacuación y los puntos de encuentro definidos en el Centro de Formación.',
+  'Evitar juegos, bromas o conductas que pongan en riesgo su integridad física o la de sus compañeros.',
+  'Reportar de inmediato al instructor cualquier condición insegura, incidente o accidente que se presente durante la formación.',
+  'Participar activamente en las capacitaciones, simulacros y actividades de prevención que programe el SENA.',
+  'Reconocer que el cumplimiento de las normas de seguridad es una responsabilidad personal y colectiva, además de una competencia indispensable para su desempeño laboral.'
+ ]
+};
+let recsDisc = [], recsDiscFalta = '';
+function recsDiscPorDefecto(f){ return (RECS_DISC_POR_FALTA[f] || RECS_DISC_GENERAL).slice(); }
+function prepararRecsDisc(){
+ const card = document.getElementById('card-recs-disc');
+ const aplica = tipoLlamado==='disciplinario' && numeroLlamado==='segundo';
+ if(card) card.style.display = aplica ? '' : 'none';
+ if(!aplica) return;
+ if(recsDiscFalta !== faltaSeleccionada){ recsDisc = recsDiscPorDefecto(faltaSeleccionada); recsDiscFalta = faltaSeleccionada; }
+ renderRecsDisc();
+}
+function renderRecsDisc(){
+ const cont = document.getElementById('lista-recs-disc');
+ if(!cont) return;
+ cont.innerHTML = recsDisc.length ? recsDisc.map((r,i) => `<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;">
+   <span style="margin-top:9px;font-weight:700;color:var(--green-mid);">•</span>
+   <textarea rows="3" style="flex:1;" oninput="recsDisc[${i}]=this.value">${escHtml(r)}</textarea>
+   <button type="button" title="Eliminar" onclick="eliminarRecDisc(${i})" style="border:1px solid #efc0ba;background:#fff;color:#c0392b;border-radius:8px;padding:6px 10px;cursor:pointer;margin-top:4px;">✕</button></div>`).join('')
+  : '<div style="font-size:13px;color:var(--muted);padding:6px 0;">No hay recomendaciones. Agrega al menos una.</div>';
+}
+function agregarRecDisc(){ recsDisc.push(''); renderRecsDisc(); const t = document.querySelectorAll('#lista-recs-disc textarea'); if(t.length) t[t.length-1].focus(); }
+function eliminarRecDisc(i){ recsDisc.splice(i,1); renderRecsDisc(); }
+function restablecerRecsDisc(){ if(!confirm('¿Volver a las recomendaciones originales de esta falta? Se perderán los cambios.')) return; recsDisc = recsDiscPorDefecto(faltaSeleccionada); renderRecsDisc(); }
+function recsDiscFinales(){ const l = recsDisc.map(r => String(r||'').replace(/\s+/g,' ').trim()).filter(Boolean); return l.length ? l : recsDiscPorDefecto(faltaSeleccionada); }
+
 function selectFalta(f){
  faltaSeleccionada=f;
  document.querySelectorAll('[id^="fc-"]').forEach(c=>c.classList.remove('selected'));
@@ -1782,6 +1895,7 @@ function mostrarCampos(){
 }
 
 function goTo(n){
+ if(n===6) setTimeout(prepararRecsDisc, 0);
  if(n>1&&!validateStep(n-1))return;
  for(let i=1;i<=7;i++){
  document.getElementById('panel'+i).classList.toggle('active',i===n);
@@ -2196,16 +2310,10 @@ function generarPDF(){
  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...BLACK);
  doc.text('Recomendaciones de mejoramiento disciplinario:', ml, y); y+=6;
 
- const recsDisc = [
- 'Cumplir estrictamente con el horario establecido para las actividades de formación.',
- 'Justificar oportunamente cualquier inasistencia, presentando los soportes correspondientes cuando aplique.',
- 'Mantener una asistencia permanente y participación activa en las actividades académicas programadas.',
- 'Atender las orientaciones y recomendaciones impartidas por los instructores y demás integrantes del equipo ejecutor.',
- 'Realizar seguimiento periódico a su proceso formativo y adoptar acciones que contribuyan al mejoramiento de su desempeño y comportamiento.'
- ];
+ const recsDiscPDF = recsDiscFinales();
  const bullet = '\u2022';
  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(...BLACK);
- for(const rec of recsDisc){
+ for(const rec of recsDiscPDF){
  const lines = doc.splitTextToSize(rec, cw-8);
  const alturaViñeta = lines.length * 5.5 + 2;
  y = checkPage(y, alturaViñeta);
@@ -2352,7 +2460,7 @@ function volverInicio(){
  document.getElementById('header-p').textContent = 'Centro Nacional Colombo Alemán — Área Metalmecánica';
  document.getElementById('btn-volver-wrap').style.display='none';
  // Reset estado
- bloquesMeses=[]; tipoLlamado=''; numeroLlamado=''; faltaSeleccionada='';
+ bloquesMeses=[]; tipoLlamado=''; numeroLlamado=''; faltaSeleccionada=''; recsDisc=[]; recsDiscFalta='';
  for(let i=1;i<=7;i++){
  const p=document.getElementById('panel'+i);
  if(p){p.classList.remove('active');if(i===1)p.classList.add('active');}
@@ -2450,9 +2558,9 @@ function buildPreviewHTML(){
  parrafo2 = `De acuerdo con los registros y reportes realizados por <strong>${instrVal}</strong>, se identificó la siguiente situación: ${primer}${extras ? '</p>'+extras+'<p style="text-align:justify;">' : ' '}Situación que afecta el desarrollo normal de las actividades de aprendizaje, el cumplimiento de los compromisos adquiridos y el alcance de los resultados de aprendizaje previstos dentro de su programa de formación.`;
  }
 
- const recsDisc = ['Cumplir estrictamente con el horario establecido para las actividades de formación.','Justificar oportunamente cualquier inasistencia, presentando los soportes correspondientes cuando aplique.','Mantener una asistencia permanente y participación activa en las actividades académicas programadas.','Atender las orientaciones y recomendaciones impartidas por los instructores y demás integrantes del equipo ejecutor.','Realizar seguimiento periódico a su proceso formativo y adoptar acciones que contribuyan al mejoramiento de su desempeño y comportamiento.'];
+ const recsDiscPrev = recsDiscFinales();
  const recsAcad = ['Cumplir con la entrega de todas las evidencias de aprendizaje en los plazos establecidos por el instructor.','Participar activamente en las actividades académicas programadas y cumplir con los compromisos adquiridos.','Mantener comunicación oportuna con el instructor ante cualquier dificultad que afecte el cumplimiento de sus responsabilidades formativas.','Atender las orientaciones y recomendaciones impartidas por los instructores y demás integrantes del equipo ejecutor.','Realizar seguimiento periódico a su proceso formativo y adoptar acciones que contribuyan al mejoramiento de su desempeño académico.'];
- const recs = tipoLlamado==='disciplinario' ? recsDisc : recsAcad;
+ const recs = tipoLlamado==='disciplinario' ? recsDiscPrev : recsAcad;
  const tipoMejora = tipoLlamado==='disciplinario' ? 'disciplinario' : 'académico';
 
  const seccion3 = esSegundo ? `
