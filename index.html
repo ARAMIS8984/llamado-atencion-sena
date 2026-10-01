@@ -6045,6 +6045,30 @@ async function fxQuitarLider(uid, i){
 function fxHoy(){ return new Date().toLocaleDateString('en-CA',{timeZone:'America/Bogota'}); }
 function fxFechaCorta(d){ try{ return new Date(d+'T12:00:00').toLocaleDateString('es-CO',{weekday:'short',day:'numeric',month:'short'}); }catch(e){ return d; } }
 const FX_LIMITE_RUTA = 3;
+// ── Ruta de prevención a la deserción ──
+// Se sugiere activarla con 3 fallas CONTINUAS o con 5 fallas en total (continuas o no).
+// Las fallas se cuentan sobre todas las clases registradas de la ficha, con cualquier instructor.
+const FX_RUTA_CONTINUAS = 3, FX_RUTA_TOTAL = 5;
+function fxOrdenSesiones(ses){ return (ses||[]).slice().sort((a,b) => (a.fecha||'').localeCompare(b.fecha||'') || (a.created_at||'').localeCompare(b.created_at||'')); }
+function fxEvaluarRuta(orden, ausente){
+ let cur = 0, max = 0, total = 0;
+ orden.forEach(s => { if(ausente.has(s.id)){ total++; cur++; if(cur > max) max = cur; } else cur = 0; });
+ const porContinuas = max >= FX_RUTA_CONTINUAS, porTotal = total >= FX_RUTA_TOTAL;
+ return { total, max, activa: porContinuas || porTotal,
+  motivo: porContinuas ? `${max} fallas continuas` : (porTotal ? `${total} fallas en total` : '') };
+}
+function fxTextoRuta(r){ return `Se sugiere activar la ruta de prevención a la deserción (${r.motivo}).`; }
+async function fxRutaPorFicha(numero){
+ const enc = encodeURIComponent(numero);
+ const [ses, ina] = await Promise.all([
+  fxReq(`asistencia_sesiones?ficha_numero=eq.${enc}&select=id,fecha,created_at`),
+  fxReq(`inasistencias?ficha_numero=eq.${enc}&select=documento,sesion_id`)
+ ]);
+ const orden = fxOrdenSesiones(ses), por = {}, out = {};
+ (ina||[]).forEach(x => (por[x.documento] = por[x.documento] || new Set()).add(x.sesion_id));
+ Object.keys(por).forEach(d => out[d] = fxEvaluarRuta(orden, por[d]));
+ return { orden, por, out };
+}
 function fxEnc(lista){ return encodeURIComponent('(' + lista.map(x => '"'+String(x).replace(/"/g,'')+'"').join(',') + ')'); }
 
 async function fxTomarAsistencia(fid, fecha){
@@ -6063,11 +6087,11 @@ async function fxCargarAsistencia(){
  try{
   const [aps, ina, ses] = await Promise.all([
    fxReq(`aprendices?ficha_id=eq.${f.id}&select=id,documento,tipo_doc,nombres,apellidos&order=apellidos.asc,nombres.asc`),
-   fxReq(`inasistencias?ficha_numero=eq.${encodeURIComponent(f.numero)}&select=documento`),
+   fxRutaPorFicha(f.numero),
    fxReq(`asistencia_sesiones?ficha_numero=eq.${encodeURIComponent(f.numero)}&usuario_id=eq.${sesionActual.id}&fecha=eq.${A.fecha}&select=id,tema,inasistencias(documento)`)
   ]);
   A.aps = aps||[];
-  A.conteo = {}; (ina||[]).forEach(x => A.conteo[x.documento] = (A.conteo[x.documento]||0)+1);
+  A.ruta = ina;
   A.marcas = {}; A.previas = new Set(); A.sesionId = null; A.tema = '';
   if(ses && ses.length){
    A.sesionId = ses[0].id; A.tema = ses[0].tema||'';
@@ -6097,16 +6121,27 @@ function fxPintarAsistencia(){
   <div class="fx-sobre" style="margin:4px 2px 8px;">Marca solo a los aprendices <b>ausentes</b>. A los demás no tienes que marcarlos.</div>
   ${A.aps.length ? A.aps.map(a => {
    const no = !!A.marcas[a.documento];
-   const n = (A.conteo[a.documento]||0) - (A.previas.has(a.documento)?1:0) + (no?1:0);
+   const ev = fxSimularRuta(a.documento, no), n = ev.total;
    return `<div class="fx-ficha" style="cursor:pointer;${no?'border-color:#efc0ba;background:#fff6f5;':''}" onclick="fxMarcar('${fxEsc(a.documento)}')">
     <div class="fx-ficha-info"><div style="font-weight:600;font-size:13px;">${fxEsc(fxNombreApr(a).toUpperCase())}</div>
-     <div class="fx-muted">${fxEsc(a.tipo_doc||'')} ${fxEsc(a.documento)}${n?` · <span style="color:${n>=FX_LIMITE_RUTA?'#c0392b':'#7a5a00'};font-weight:600;">${n} inasistencia${n!==1?'s':''}</span>`:''}</div></div>
+     <div class="fx-muted">${fxEsc(a.tipo_doc||'')} ${fxEsc(a.documento)}${n?` · <span style="color:${ev.activa?'#c0392b':'#7a5a00'};font-weight:600;">${n} inasistencia${n!==1?'s':''}${ev.max>1?` (${ev.max} continuas)`:''}</span>`:''}</div>${ev.activa?`<div style="font-size:11px;color:#c0392b;font-weight:600;margin-top:2px;">Se sugiere activar la ruta de prevención</div>`:''}</div>
     ${no ? `<span class="fx-btn fx-btn-sm" style="pointer-events:none;background:#c0392b;color:#fff;">AUSENTE</span>` : `<span class="fx-btn fx-btn-sm" style="pointer-events:none;background:#fff;color:#8a948a;border:1px dashed #c9d2c6;font-weight:500;">Ausente</span>`}</div>`;
   }).join('') : '<div class="fx-aviso">Esta ficha no tiene aprendices en formación.</div>'}
   <div class="fx-pie">
    <div class="fx-muted" style="text-align:center;margin-bottom:6px;">${faltan ? `<b style="color:#c0392b">${faltan} ausente${faltan!==1?'s':''}</b> de ${A.aps.length} aprendices` : 'Ningún aprendiz marcado como ausente'}</div>
    <button type="button" class="fx-btn fx-btn-p" style="width:100%;padding:12px;" id="fx-asis-guardar" onclick="fxGuardarAsistencia()" ${A.aps.length?'':'disabled'}>Guardar inasistencias</button>
   </div>`;
+}
+// Calcula la ruta del aprendiz como quedaría si se guarda la marca actual de esta clase
+function fxSimularRuta(doc, ausenteAhora){
+ const A = FX.asis, R = A.ruta || {orden: [], por: {}};
+ const idActual = A.sesionId || '__nueva';
+ let orden = R.orden;
+ if(!A.sesionId) orden = fxOrdenSesiones(orden.concat([{id: idActual, fecha: A.fecha, created_at: '9999'}]));
+ const set = new Set(R.por[doc] || []);
+ set.delete(idActual);
+ if(ausenteAhora) set.add(idActual);
+ return fxEvaluarRuta(orden, set);
 }
 function fxMarcar(doc){
  const A = FX.asis;
@@ -6139,14 +6174,15 @@ async function fxGuardarAsistencia(){
    nombre_aprendiz: fxNombreApr(a).toUpperCase(), fecha: A.fecha, usuario_id: sesionActual.id, instructor_nombre: nombreIns
   })), 'return=minimal');
   // Resumen
-  const ruta = ausentes.map(a => [a, (A.conteo[a.documento]||0) - (A.previas.has(a.documento)?1:0) + 1]).filter(([a,n]) => n >= FX_LIMITE_RUTA);
+  const R2 = await fxRutaPorFicha(f.numero);
+  const ruta = ausentes.map(a => [a, R2.out[a.documento]]).filter(([a,ev]) => ev && ev.activa);
   const body = document.getElementById('fx-body');
   body.innerHTML = `<div class="fx-card" style="text-align:center;padding:24px 16px;">
     <h3 style="font-size:17px;">Inasistencias registradas</h3>
     <div class="fx-muted" style="margin:6px 0 4px;">${fxEtiqueta(f)} · ${fxFechaCorta(A.fecha)}</div>
     <div style="font-size:14px;margin:10px 0;">${ausentes.length ? `<b style="color:#c0392b">${ausentes.length} ausente${ausentes.length!==1?'s':''}</b> de ${A.aps.length} aprendices` : 'Sin ausentes en esta clase'}</div>
     ${nuevos.length?`<div class="fx-aviso">Se avisó de ${nuevos.length} inasistencia${nuevos.length!==1?'s':''} a los demás instructores asociados a esta ficha.</div>`:''}
-    ${ruta.map(([a,n]) => `<div class="fx-aviso fx-err"><b>${fxEsc(fxNombreApr(a).toUpperCase())}</b> completa ${n} inasistencias. Corresponde el reporte de la ruta de prevención.</div>`).join('')}
+    ${ruta.map(([a,ev]) => `<div class="fx-aviso fx-err"><b>${fxEsc(fxNombreApr(a).toUpperCase())}</b>: ${fxTextoRuta(ev)}</div>`).join('')}
     <button type="button" class="fx-btn fx-btn-p" style="margin-top:14px;width:100%;" onclick="fxIrTab('asis')">Volver al registro de inasistencia</button></div>`;
  }catch(e){
   alert('No se pudieron guardar las inasistencias: '+e.message);
@@ -6158,11 +6194,14 @@ async function fxGuardarAsistencia(){
 async function fxHistorialAprendiz(doc, nombre){
  fxAbrirHoja(`<b>${fxEsc(nombre)}</b><div class="fx-muted">Documento ${fxEsc(doc)}</div>`, '<div class="fx-muted" style="padding:14px;text-align:center;">Cargando...</div>');
  try{
-  const r = await fxReq(`inasistencias?documento=eq.${encodeURIComponent(doc)}&select=fecha,instructor_nombre,ficha_numero,asistencia_sesiones(tema)&order=fecha.desc,created_at.desc`);
+  const r = await fxReq(`inasistencias?documento=eq.${encodeURIComponent(doc)}&select=fecha,instructor_nombre,ficha_numero,sesion_id,asistencia_sesiones(tema)&order=fecha.desc,created_at.desc`);
   const n = (r||[]).length;
+  let ev = {total: n, max: 0, activa: false};
+  const fichasAp = [...new Set((r||[]).map(x => x.ficha_numero))];
+  if(fichasAp.length === 1){ const R = await fxRutaPorFicha(fichasAp[0]); ev = R.out[doc] || ev; }
   document.getElementById('fx-hoja-cuerpo').innerHTML =
-   `<div style="font-size:15px;margin-bottom:8px;">Total: <b style="color:${n>=FX_LIMITE_RUTA?'#c0392b':'inherit'}">${n} inasistencia${n!==1?'s':''}</b></div>` +
-   (n>=FX_LIMITE_RUTA ? `<div class="fx-aviso fx-err" style="margin-bottom:8px;">Completa ${n} inasistencias. Corresponde el reporte de la ruta de prevención.</div>` : '') +
+   `<div style="font-size:15px;margin-bottom:8px;">Total: <b style="color:${ev.activa?'#c0392b':'inherit'}">${n} inasistencia${n!==1?'s':''}</b>${ev.max>1?` · máximo <b>${ev.max} continuas</b>`:''}</div>` +
+   (ev.activa ? `<div class="fx-aviso fx-err" style="margin-bottom:8px;">${fxTextoRuta(ev)}</div>` : '') +
    (n ? r.map(x => `<div class="fx-apr"><div class="fx-apr-n"><b>${fxFechaCorta(x.fecha)}</b><span class="fx-muted">Clase de ${fxEsc(x.instructor_nombre||'')}${x.asistencia_sesiones&&x.asistencia_sesiones.tema?' · '+fxEsc(x.asistencia_sesiones.tema):''}</span></div></div>`).join('')
       : '<div class="fx-aviso fx-ok">Sin inasistencias registradas.</div>');
  }catch(e){ document.getElementById('fx-hoja-cuerpo').innerHTML = `<div class="fx-aviso fx-err">${fxEsc(e.message)}</div>`; }
@@ -6205,9 +6244,8 @@ async function fxRenderAlertas(){
   if(!nums.length){ body.innerHTML = atras + '<div class="fx-card fx-vacio"><p>Cuando otro instructor registre una inasistencia en una de tus fichas, te aparecerá aquí.</p><button type="button" class="fx-btn fx-btn-p" onclick="fxAbrirAsociar()">Asociar fichas a mi perfil</button></div>'; return; }
   const desde = await fxVistoHasta();
   const r = await fxReq(`inasistencias?ficha_numero=in.${fxEnc(nums)}&usuario_id=neq.${sesionActual.id}&select=id,documento,nombre_aprendiz,fecha,instructor_nombre,ficha_numero,created_at&order=created_at.desc&limit=80`) || [];
-  const docs = [...new Set(r.map(x => x.documento))];
-  const tot = {};
-  if(docs.length){ (await fxReq(`inasistencias?documento=in.${fxEnc(docs)}&select=documento`)||[]).forEach(x => tot[x.documento] = (tot[x.documento]||0)+1); }
+  const rutas = {};
+  for(const num of [...new Set(r.map(x => x.ficha_numero))]){ rutas[num] = (await fxRutaPorFicha(num)).out; }
   if(!r.length){ body.innerHTML = atras + '<div class="fx-card fx-vacio"><p>No hay inasistencias registradas por otros instructores en tus fichas.</p></div>'; return; }
   // Una sola notificación por aprendiz, con todos sus reportes adentro (el más reciente primero)
   const grupos = [], porDoc = {};
@@ -6217,12 +6255,13 @@ async function fxRenderAlertas(){
   body.innerHTML = atras + `<div class="fx-sobre" style="margin-bottom:8px;">${nuevas?`<b>${nuevas} aprendiz${nuevas!==1?'es':''} con reportes nuevos</b> · `:''}Revisa si el aprendiz también faltó en tu clase</div>` +
    grupos.map(g => {
     const f = mapa[g.ficha] || {numero:g.ficha};
-    const n = tot[g.doc]||0, nueva = g.reportes.some(x => x.created_at > desde);
+    const ev = (rutas[g.ficha]||{})[g.doc] || {total: g.reportes.length, max: 0, activa: false};
+    const n = ev.total, nueva = g.reportes.some(x => x.created_at > desde);
     const mia = f.id && FX.misFichas.has(f.id);
     return `<div class="fx-card" style="padding:12px;${nueva?'border-color:#f3c2bc;':''}">
      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;"><div style="font-weight:700;font-size:14px;">${fxEsc(g.nombre)}</div>${nueva?'<span class="fx-pill" style="background:#fdecea;color:#c0392b;flex:0 0 auto;">Nuevo</span>':''}</div>
-     <div class="fx-muted">Ficha ${fxEtiqueta(f)} · <b style="color:${n>=FX_LIMITE_RUTA?'#c0392b':'#7a5a00'}">${n} inasistencia${n!==1?'s':''} en total</b></div>
-     ${n>=FX_LIMITE_RUTA?'<div class="fx-aviso fx-err">Corresponde el reporte de la ruta de prevención.</div>':''}
+     <div class="fx-muted">Ficha ${fxEtiqueta(f)} · <b style="color:${ev.activa?'#c0392b':'#7a5a00'}">${n} inasistencia${n!==1?'s':''} en total${ev.max>1?` (${ev.max} continuas)`:''}</b></div>
+     ${ev.activa?`<div class="fx-aviso fx-err">${fxTextoRuta(ev)}</div>`:''}
      <div style="margin-top:8px;border-top:1px solid #f0f0f0;">
       ${g.reportes.map(x => `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f5f5f5;font-size:12px;">
         <span style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${x.created_at > desde ? '#e41e3f' : '#d5dbd3'};"></span>
@@ -6319,12 +6358,12 @@ async function fxsElegirFicha(id, fid){
   const num = encodeURIComponent(S.f.numero);
   const [aps, ina, hist] = await Promise.all([
    fxReq(`aprendices?ficha_id=eq.${S.f.id}&select=documento,tipo_doc,nombres,apellidos,pendientes&order=apellidos.asc,nombres.asc`),
-   fxReq(`inasistencias?ficha_numero=eq.${num}&select=documento`),
+   fxRutaPorFicha(S.f.numero),
    fxReq(`historial_documentos?ficha=eq.${num}&select=documento_aprendiz,tipo_documento,tipo_llamado,numero_llamado,fecha_documento&order=fecha_documento.asc`)
   ]);
-  const nIna = {}; (ina||[]).forEach(x => nIna[x.documento] = (nIna[x.documento]||0)+1);
+  const evs = ina.out;
   const docs = {}; (hist||[]).forEach(h => { const d = String(h.documento_aprendiz||'').replace(/[^0-9A-Za-z]/g,''); (docs[d] = docs[d]||[]).push(h); });
-  S.aps = (aps||[]).map(a => ({...a, nIna: nIna[a.documento]||0, docs: docs[a.documento]||[]}));
+  S.aps = (aps||[]).map(a => ({...a, nIna: (evs[a.documento]||{}).total||0, ruta: !!(evs[a.documento]||{}).activa, docs: docs[a.documento]||[]}));
   fxsPintarAprendices(id);
  }catch(e){ box.innerHTML = `<div class="fx-aviso fx-err">${fxEsc(e.message)}</div>`; }
 }
@@ -6332,7 +6371,7 @@ function fxsResumen(a){
  const ll = a.docs.filter(d => d.tipo_documento==='llamado');
  const pl = a.docs.filter(d => d.tipo_documento==='plan');
  const p = [];
- if(a.nIna) p.push(`<span style="color:${a.nIna>=3?'#c0392b':'#7a5a00'};font-weight:600;">${a.nIna} inasistencia${a.nIna!==1?'s':''}</span>`);
+ if(a.nIna) p.push(`<span style="color:${a.ruta?'#c0392b':'#7a5a00'};font-weight:600;">${a.nIna} inasistencia${a.nIna!==1?'s':''}${a.ruta?' · ruta de prevención sugerida':''}</span>`);
  if(ll.length) p.push(`<span style="color:#7a5a00;font-weight:600;">${ll.length} llamado${ll.length!==1?'s':''}</span>`);
  if(pl.length) p.push(`<span style="color:#7a5a00;font-weight:600;">${pl.length} plan${pl.length!==1?'es':''}</span>`);
  return p.length ? `<div class="fx-muted" style="margin-top:2px;">${p.join(' · ')}</div>` : '';
