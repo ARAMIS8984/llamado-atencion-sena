@@ -5322,7 +5322,7 @@ aplicarVista();
 <div id="fx-vista" class="fx-vista">
  <div class="fx-top">
   <button type="button" onclick="fxCerrar()">← Volver</button>
-  <div><div class="fx-titulo">Fichas en formación</div><div class="fx-sub" id="fx-sub"></div></div>
+  <div><div class="fx-titulo" id="fx-titulo-txt">Registro de asistencia</div><div class="fx-sub" id="fx-sub"></div></div>
  </div>
  <div class="fx-tabs" id="fx-tabs"></div>
  <div class="fx-body" id="fx-body"></div>
@@ -5387,6 +5387,7 @@ async function fxAlIniciar(){
  await fxCargarRolLider();
  fxPintarTarjetaHome();
  fxPintarBotonAdmin();
+ fxContarAlertas();
  if(fxEsLider()){
   const c = document.getElementById('bs-cargo');
   if(c && !/Líder/.test(c.textContent)) c.textContent += ' · Líder de programa';
@@ -5401,10 +5402,11 @@ function fxPintarTarjetaHome(){
   mias = document.createElement('div');
   mias.id = 'fx-card-home';
   mias.className = 'menu-card disponible';
-  mias.onclick = () => fxAbrir('mias');
+  mias.onclick = () => fxAbrir(FX.nAlertas ? 'alertas' : 'mias');
   grid.insertBefore(mias, grid.firstChild);
  }
- mias.innerHTML = `<div class="menu-info"><h3>Mis fichas</h3><p>Asocia a tu perfil las fichas de tu proceso formativo y consulta sus aprendices</p></div><span class="menu-arrow">›</span>`;
+ const na = FX.nAlertas||0;
+ mias.innerHTML = `<div class="menu-info"><h3>Registro de asistencia${na?` <span style="display:inline-block;background:#c0392b;color:#fff;border-radius:10px;font-size:11px;padding:1px 8px;vertical-align:middle;">${na} alerta${na!==1?'s':''}</span>`:''}</h3><p>Toma asistencia en las fichas asociadas a tu perfil y revisa las inasistencias que registran los demás instructores</p></div><span class="menu-arrow">›</span>`;
  // Tarjeta adicional solo para líderes y administradores: cargar fichas del programa
  let prog = document.getElementById('fx-card-programa');
  if(fxEsLider() || fxEsAdmin()){
@@ -5432,15 +5434,16 @@ function fxPintarBotonAdmin(){
  const m = document.createElement('button');
  m.id = 'fx-btn-admin-mias';
  m.className = 'adm-opt';
- m.onclick = () => fxAbrir('mias');
+ m.onclick = () => fxAbrir(FX.nAlertas ? 'alertas' : 'mias');
  m.style.cssText = b.style.cssText;
- m.innerHTML = `<span style="font-size:24px;"></span><div style="flex:1;"><div style="font-size:15px;font-weight:600;color:#1a1a1a;">Mis fichas</div><div style="font-size:12px;color:#666;">Asociar las fichas de mi proceso formativo</div></div><span style="color:#1565c0;font-size:18px;">›</span>`;
+ m.innerHTML = `<span style="font-size:24px;"></span><div style="flex:1;"><div style="font-size:15px;font-weight:600;color:#1a1a1a;">Registro de asistencia</div><div style="font-size:12px;color:#666;">Mis fichas, toma de asistencia y alertas</div></div><span style="color:#1565c0;font-size:18px;">›</span>`;
  ref.parentNode.insertBefore(m, b);
 }
 
 // ── Vista principal ──
 function fxTabs(){
- const t = [['mias','Mis fichas']];
+ const na = FX.nAlertas||0;
+ const t = [['mias','Mis fichas'],['alertas','Alertas'+(na?` (${na})`:'')]];
  if(fxEsLider() || fxEsAdmin()) t.push(['cargar', fxEsAdmin() ? 'Todas las fichas' : 'Fichas de mi programa']);
  if(fxEsAdmin()) t.push(['lideres','Líderes']);
  return t;
@@ -5456,6 +5459,7 @@ function fxAbrir(tab){
 }
 function fxCerrar(){
  document.getElementById('fx-vista').classList.remove('abierta');
+ fxContarAlertas();
  document.body.style.overflow = '';
 }
 function fxIrTab(tab){
@@ -5466,7 +5470,10 @@ function fxIrTab(tab){
  document.getElementById('fx-tabs').innerHTML = tabs.map(([k,l]) => `<button type="button" class="fx-tab ${k===tab?'on':''}" onclick="fxIrTab('${k}')">${l}</button>`).join('');
  const body = document.getElementById('fx-body');
  body.innerHTML = '<div class="fx-muted" style="padding:20px;text-align:center;">Cargando...</div>';
+ const titulos = {mias:'Registro de asistencia', alertas:'Registro de asistencia', cargar:'Fichas del programa', lideres:'Líderes y fichas'};
+ document.getElementById('fx-titulo-txt').textContent = titulos[tab] || 'Registro de asistencia';
  if(tab==='mias') fxRenderMias();
+ else if(tab==='alertas') fxRenderAlertas();
  else if(tab==='cargar') fxRenderCargar();
  else if(tab==='lideres') fxRenderLideres();
 }
@@ -5503,7 +5510,7 @@ async function fxRenderMias(){
   if(!mias.length){
    body.innerHTML = `<div class="fx-card fx-vacio">
     <h3>Todavía no tienes fichas asociadas</h3>
-    <p>Asocia a tu perfil las fichas de tu proceso formativo. Así podrás consultar sus aprendices y, más adelante, tomar asistencia.</p>
+    <p>Asocia a tu perfil las fichas de tu proceso formativo. Así podrás tomar asistencia y consultar sus aprendices.</p>
     <button type="button" class="fx-btn fx-btn-p" onclick="fxAbrirAsociar()">Asociar fichas a mi perfil</button></div>`;
    return;
   }
@@ -5513,7 +5520,8 @@ async function fxRenderMias(){
    fxAgrupar(mias).map(([p, fs]) => `<div class="fx-grupo"><span>${fxEsc(p)}</span></div>` + fs.map(f => `
     <div class="fx-ficha"><div class="fx-ficha-info"><div class="fx-ficha-num">${fxEtiqueta(f)}</div>
      <div class="fx-muted">${f.nApr} ${f.nApr!==1?'aprendices':'aprendiz'} en formación</div></div>
-     <div class="fx-ficha-acc"><button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="fxVerAprendices('${f.id}')">Aprendices</button>
+     <div class="fx-ficha-acc"><button type="button" class="fx-btn fx-btn-p fx-btn-sm" onclick="fxTomarAsistencia('${f.id}')">Tomar asistencia</button>
+     <button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="fxVerAprendices('${f.id}')">Aprendices</button>
      <button type="button" class="fx-btn fx-btn-d fx-btn-sm" onclick="fxDesasociar('${f.id}')">Quitar</button></div></div>`).join('')).join('');
  }catch(e){ body.innerHTML = `<div class="fx-aviso fx-err">No se pudieron cargar tus fichas. Revisa la conexión. (${fxEsc(e.message)})</div>`; }
 }
@@ -5587,7 +5595,7 @@ async function fxVerAprendices(fid){
   const puede = fxPuedeRetirar(f);
   document.getElementById('fx-hoja-cuerpo').innerHTML = (aps&&aps.length) ?
    `<div class="fx-muted" style="margin-bottom:6px;">${aps.length} ${aps.length!==1?'aprendices':'aprendiz'} en formación</div>` + aps.map(a => `
-    <div class="fx-apr" id="fx-apr-${a.id}"><div class="fx-apr-n"><b>${fxEsc(fxNombreApr(a).toUpperCase())}</b><span class="fx-muted">${fxEsc(a.tipo_doc||'')} ${fxEsc(a.documento)}</span></div>
+    <div class="fx-apr" id="fx-apr-${a.id}"><div class="fx-apr-n" style="cursor:pointer;" onclick="fxHistorialAprendiz('${fxEsc(a.documento)}','${fxEsc(fxNombreApr(a).toUpperCase().replace(/'/g,''))}')"><b>${fxEsc(fxNombreApr(a).toUpperCase())}</b><span class="fx-muted">${fxEsc(a.tipo_doc||'')} ${fxEsc(a.documento)}</span></div>
     ${puede?`<button type="button" class="fx-btn fx-btn-d fx-btn-sm" onclick="fxRetirar('${a.id}','${fid}')">Retirar</button>`:''}</div>`).join('')
    : '<div class="fx-aviso">Esta ficha no tiene aprendices en formación registrados.</div>';
  }catch(e){ document.getElementById('fx-hoja-cuerpo').innerHTML = `<div class="fx-aviso fx-err">${fxEsc(e.message)}</div>`; }
@@ -5837,6 +5845,196 @@ async function fxQuitarLider(uid, i){
  if(!confirm(`¿Quitar a ${u?u.nombre:'esta persona'} como líder de ${FX.programas[i]}?`)) return;
  try{ await fxReq(`lideres_programa?usuario_id=eq.${uid}&programa=eq.${encodeURIComponent(FX.programas[i])}`,'DELETE'); await fxCargarRolLider(); fxRenderLideres(); }
  catch(e){ alert('No se pudo quitar: '+e.message); }
+}
+
+
+// ═══ REGISTRO DE ASISTENCIA ═══
+function fxHoy(){ return new Date().toLocaleDateString('en-CA',{timeZone:'America/Bogota'}); }
+function fxFechaCorta(d){ try{ return new Date(d+'T12:00:00').toLocaleDateString('es-CO',{weekday:'short',day:'numeric',month:'short'}); }catch(e){ return d; } }
+const FX_LIMITE_RUTA = 3;
+function fxEnc(lista){ return encodeURIComponent('(' + lista.map(x => '"'+String(x).replace(/"/g,'')+'"').join(',') + ')'); }
+
+async function fxTomarAsistencia(fid, fecha){
+ const f = FX.fichasCache[fid];
+ if(!f) return;
+ FX.asis = { fid, f, fecha: fecha || fxHoy(), marcas: {}, previas: new Set(), sesionId: null, aps: [], conteo: {} };
+ const body = document.getElementById('fx-body');
+ body.innerHTML = '<div class="fx-muted" style="padding:20px;text-align:center;">Cargando aprendices...</div>';
+ document.getElementById('fx-vista').scrollTop = 0;
+ await fxCargarAsistencia();
+}
+async function fxCargarAsistencia(){
+ const A = FX.asis, f = A.f;
+ const body = document.getElementById('fx-body');
+ try{
+  const [aps, ina, ses] = await Promise.all([
+   fxReq(`aprendices?ficha_id=eq.${f.id}&select=id,documento,tipo_doc,nombres,apellidos&order=apellidos.asc,nombres.asc`),
+   fxReq(`inasistencias?ficha_numero=eq.${encodeURIComponent(f.numero)}&select=documento`),
+   fxReq(`asistencia_sesiones?ficha_numero=eq.${encodeURIComponent(f.numero)}&usuario_id=eq.${sesionActual.id}&fecha=eq.${A.fecha}&select=id,tema,inasistencias(documento)`)
+  ]);
+  A.aps = aps||[];
+  A.conteo = {}; (ina||[]).forEach(x => A.conteo[x.documento] = (A.conteo[x.documento]||0)+1);
+  A.marcas = {}; A.previas = new Set(); A.sesionId = null; A.tema = '';
+  if(ses && ses.length){
+   A.sesionId = ses[0].id; A.tema = ses[0].tema||'';
+   (ses[0].inasistencias||[]).forEach(x => { A.previas.add(x.documento); A.marcas[x.documento] = true; });
+  }
+  fxPintarAsistencia();
+ }catch(e){ body.innerHTML = `<div class="fx-aviso fx-err">No se pudo cargar la ficha. (${fxEsc(e.message)})</div>`; }
+}
+function fxPintarAsistencia(){
+ const A = FX.asis, f = A.f;
+ const body = document.getElementById('fx-body');
+ const faltan = A.aps.filter(a => A.marcas[a.documento]).length;
+ body.innerHTML = `
+  <button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="fxIrTab('mias')">← Mis fichas</button>
+  <div class="fx-card" style="margin-top:10px;">
+   <div class="fx-ficha-num" style="font-size:17px;">${fxEtiqueta(f)}</div>
+   <div class="fx-muted" style="margin-bottom:10px;">${fxEsc(f.programa)}</div>
+   <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+    <div><label class="fx-muted">Fecha de la clase</label>
+     <input type="date" class="fx-input" value="${A.fecha}" max="${fxHoy()}" onchange="if(this.value){FX.asis.fecha=this.value;fxCargarAsistencia();}"></div>
+    <div><label class="fx-muted">Competencia o tema de la clase <span style="opacity:.7">(opcional)</span></label>
+     <input type="text" class="fx-input" id="fx-asis-tema" value="${fxEsc(A.tema||'')}" placeholder="Ej: Programación CNC torno"></div>
+   </div>
+   ${A.sesionId?`<div class="fx-aviso">Ya registraste la asistencia de este día. Puedes corregirla y guardar de nuevo.</div>`:''}
+  </div>
+  <div class="fx-muted" style="margin:4px 2px 8px;">Toca a quien <b>no asistió</b>. Todos los demás quedan como presentes.</div>
+  ${A.aps.length ? A.aps.map(a => {
+   const no = !!A.marcas[a.documento];
+   const n = (A.conteo[a.documento]||0) - (A.previas.has(a.documento)?1:0) + (no?1:0);
+   return `<div class="fx-ficha" style="cursor:pointer;${no?'border-color:#efc0ba;background:#fff6f5;':''}" onclick="fxMarcar('${fxEsc(a.documento)}')">
+    <div class="fx-ficha-info"><div style="font-weight:600;font-size:13px;">${fxEsc(fxNombreApr(a).toUpperCase())}</div>
+     <div class="fx-muted">${fxEsc(a.tipo_doc||'')} ${fxEsc(a.documento)}${n?` · <span style="color:${n>=FX_LIMITE_RUTA?'#c0392b':'#7a5a00'};font-weight:600;">${n} inasistencia${n!==1?'s':''}</span>`:''}</div></div>
+    <span class="fx-btn fx-btn-sm ${no?'fx-btn-d':'fx-btn-p'}" style="pointer-events:none;">${no?'No asistió':'Asistió'}</span></div>`;
+  }).join('') : '<div class="fx-aviso">Esta ficha no tiene aprendices en formación.</div>'}
+  <div style="position:sticky;bottom:0;background:#f5f6fa;padding:10px 0 4px;margin-top:6px;">
+   <div class="fx-muted" style="text-align:center;margin-bottom:6px;">Asistieron <b>${A.aps.length-faltan}</b> · No asistieron <b style="color:${faltan?'#c0392b':'inherit'}">${faltan}</b></div>
+   <button type="button" class="fx-btn fx-btn-p" style="width:100%;padding:12px;" id="fx-asis-guardar" onclick="fxGuardarAsistencia()" ${A.aps.length?'':'disabled'}>Guardar asistencia</button>
+  </div>`;
+}
+function fxMarcar(doc){
+ const A = FX.asis;
+ const t = document.getElementById('fx-asis-tema'); if(t) A.tema = t.value;
+ A.marcas[doc] = !A.marcas[doc];
+ const y = document.getElementById('fx-vista').scrollTop;
+ fxPintarAsistencia();
+ document.getElementById('fx-vista').scrollTop = y;
+}
+async function fxGuardarAsistencia(){
+ const A = FX.asis, f = A.f;
+ const t = document.getElementById('fx-asis-tema'); if(t) A.tema = t.value.trim();
+ if(A.fecha > fxHoy()){ alert('La fecha no puede ser futura.'); return; }
+ const btn = document.getElementById('fx-asis-guardar');
+ btn.disabled = true; btn.textContent = 'Guardando...';
+ const ausentes = A.aps.filter(a => A.marcas[a.documento]);
+ const nombreIns = sesionActual.usuario==='admin' ? 'Administrador' : sesionActual.nombre;
+ try{
+  const s = await fxReq('asistencia_sesiones?on_conflict=ficha_numero,usuario_id,fecha','POST',{
+   ficha_id: f.id, ficha_numero: f.numero, usuario_id: sesionActual.id, instructor_nombre: nombreIns,
+   fecha: A.fecha, tema: A.tema||null, total_aprendices: A.aps.length, total_inasistencias: ausentes.length,
+   updated_at: new Date().toISOString()
+  }, 'resolution=merge-duplicates,return=representation');
+  const sid = s[0].id;
+  const ahora = new Set(ausentes.map(a => a.documento));
+  const quitar = [...A.previas].filter(d => !ahora.has(d));
+  const nuevos = ausentes.filter(a => !A.previas.has(a.documento));
+  if(quitar.length) await fxReq(`inasistencias?sesion_id=eq.${sid}&documento=in.${fxEnc(quitar)}`,'DELETE');
+  if(nuevos.length) await fxReq('inasistencias','POST', nuevos.map(a => ({
+   sesion_id: sid, ficha_id: f.id, ficha_numero: f.numero, documento: a.documento,
+   nombre_aprendiz: fxNombreApr(a).toUpperCase(), fecha: A.fecha, usuario_id: sesionActual.id, instructor_nombre: nombreIns
+  })), 'return=minimal');
+  // Resumen
+  const ruta = ausentes.map(a => [a, (A.conteo[a.documento]||0) - (A.previas.has(a.documento)?1:0) + 1]).filter(([a,n]) => n >= FX_LIMITE_RUTA);
+  const body = document.getElementById('fx-body');
+  body.innerHTML = `<div class="fx-card" style="text-align:center;padding:24px 16px;">
+    <h3 style="font-size:17px;">Asistencia guardada</h3>
+    <div class="fx-muted" style="margin:6px 0 4px;">${fxEtiqueta(f)} · ${fxFechaCorta(A.fecha)}</div>
+    <div style="font-size:14px;margin:10px 0;">Asistieron <b>${A.aps.length-ausentes.length}</b> de ${A.aps.length}</div>
+    ${nuevos.length?`<div class="fx-aviso">Se avisó de ${nuevos.length} inasistencia${nuevos.length!==1?'s':''} a los demás instructores de la ficha y al líder del programa.</div>`:''}
+    ${ruta.map(([a,n]) => `<div class="fx-aviso fx-err"><b>${fxEsc(fxNombreApr(a).toUpperCase())}</b> completa ${n} inasistencias. Corresponde el reporte de la ruta de prevención.</div>`).join('')}
+    <button type="button" class="fx-btn fx-btn-p" style="margin-top:14px;width:100%;" onclick="fxIrTab('mias')">Volver a mis fichas</button></div>`;
+ }catch(e){
+  alert('No se pudo guardar la asistencia: '+e.message);
+  btn.disabled = false; btn.textContent = 'Guardar asistencia';
+ }
+}
+
+// Historial de inasistencias de un aprendiz
+async function fxHistorialAprendiz(doc, nombre){
+ fxAbrirHoja(`<b>${fxEsc(nombre)}</b><div class="fx-muted">Documento ${fxEsc(doc)}</div>`, '<div class="fx-muted" style="padding:14px;text-align:center;">Cargando...</div>');
+ try{
+  const r = await fxReq(`inasistencias?documento=eq.${encodeURIComponent(doc)}&select=fecha,instructor_nombre,ficha_numero,asistencia_sesiones(tema)&order=fecha.desc,created_at.desc`);
+  const n = (r||[]).length;
+  document.getElementById('fx-hoja-cuerpo').innerHTML =
+   `<div style="font-size:15px;margin-bottom:8px;">Total: <b style="color:${n>=FX_LIMITE_RUTA?'#c0392b':'inherit'}">${n} inasistencia${n!==1?'s':''}</b></div>` +
+   (n>=FX_LIMITE_RUTA ? `<div class="fx-aviso fx-err" style="margin-bottom:8px;">Completa ${n} inasistencias. Corresponde el reporte de la ruta de prevención.</div>` : '') +
+   (n ? r.map(x => `<div class="fx-apr"><div class="fx-apr-n"><b>${fxFechaCorta(x.fecha)}</b><span class="fx-muted">Clase de ${fxEsc(x.instructor_nombre||'')}${x.asistencia_sesiones&&x.asistencia_sesiones.tema?' · '+fxEsc(x.asistencia_sesiones.tema):''}</span></div></div>`).join('')
+      : '<div class="fx-aviso fx-ok">Sin inasistencias registradas.</div>');
+ }catch(e){ document.getElementById('fx-hoja-cuerpo').innerHTML = `<div class="fx-aviso fx-err">${fxEsc(e.message)}</div>`; }
+}
+
+// ── Alertas: inasistencias registradas por otros instructores en mis fichas (y en las de mi programa si soy líder) ──
+async function fxNumerosAlerta(){
+ await fxTraerMias();
+ const fichas = await fxTraerFichas();
+ const mias = fichas.filter(f => FX.misFichas.has(f.id) || FX.lider.includes(f.programa));
+ const mapa = {}; mias.forEach(f => mapa[f.numero] = f);
+ return mapa;
+}
+async function fxVistoHasta(){
+ const r = await fxReq(`lecturas_alertas?usuario_id=eq.${sesionActual.id}&select=visto_hasta`);
+ return (r&&r[0]) ? r[0].visto_hasta : '1970-01-01T00:00:00Z';
+}
+async function fxContarAlertas(){
+ try{
+  const mapa = await fxNumerosAlerta();
+  const nums = Object.keys(mapa);
+  if(!nums.length){ FX.nAlertas = 0; }
+  else {
+   const desde = await fxVistoHasta();
+   const r = await fxReq(`inasistencias?ficha_numero=in.${fxEnc(nums)}&usuario_id=neq.${sesionActual.id}&created_at=gt.${encodeURIComponent(desde)}&select=id`);
+   FX.nAlertas = (r||[]).length;
+  }
+ }catch(e){ FX.nAlertas = 0; }
+ fxPintarTarjetaHome();
+ const b = document.getElementById('fx-btn-admin-mias');
+ if(b){ const d = b.querySelector('div div'); if(d) d.innerHTML = 'Registro de asistencia' + (FX.nAlertas?` <span class="fx-pill" style="background:#fdecea;color:#c0392b;">${FX.nAlertas}</span>`:''); }
+}
+async function fxRenderAlertas(){
+ const body = document.getElementById('fx-body');
+ try{
+  const mapa = await fxNumerosAlerta();
+  const nums = Object.keys(mapa);
+  if(!nums.length){ body.innerHTML = '<div class="fx-card fx-vacio"><p>Cuando otro instructor registre una inasistencia en una de tus fichas, te aparecerá aquí.</p><button type="button" class="fx-btn fx-btn-p" onclick="fxAbrirAsociar()">Asociar fichas a mi perfil</button></div>'; return; }
+  const desde = await fxVistoHasta();
+  const r = await fxReq(`inasistencias?ficha_numero=in.${fxEnc(nums)}&usuario_id=neq.${sesionActual.id}&select=id,documento,nombre_aprendiz,fecha,instructor_nombre,ficha_numero,created_at&order=created_at.desc&limit=80`) || [];
+  const docs = [...new Set(r.map(x => x.documento))];
+  const tot = {};
+  if(docs.length){ (await fxReq(`inasistencias?documento=in.${fxEnc(docs)}&select=documento`)||[]).forEach(x => tot[x.documento] = (tot[x.documento]||0)+1); }
+  const nuevas = r.filter(x => x.created_at > desde).length;
+  if(!r.length){ body.innerHTML = '<div class="fx-card fx-vacio"><p>No hay inasistencias registradas por otros instructores en tus fichas.</p></div>'; return; }
+  body.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
+    <div class="fx-muted">${nuevas?`<b style="color:#c0392b">${nuevas} nueva${nuevas!==1?'s':''}</b> · `:''}Revisa si el aprendiz también faltó en tu clase</div>
+    ${nuevas?`<button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="fxMarcarRevisadas()">Marcar revisadas</button>`:''}</div>` +
+   r.map(x => {
+    const f = mapa[x.ficha_numero] || {numero:x.ficha_numero};
+    const n = tot[x.documento]||0, nueva = x.created_at > desde;
+    return `<div class="fx-card" style="padding:12px;${nueva?'border-color:#f3c2bc;':''}">
+     <div style="display:flex;justify-content:space-between;gap:8px;"><div style="font-weight:600;font-size:13px;">${fxEsc(x.nombre_aprendiz||x.documento)}</div>${nueva?'<span class="fx-pill" style="background:#fdecea;color:#c0392b;">Nueva</span>':''}</div>
+     <div class="fx-muted">No asistió el ${fxFechaCorta(x.fecha)} a la clase de ${fxEsc(x.instructor_nombre||'')}<br>Ficha ${fxEtiqueta(f)} · <b style="color:${n>=FX_LIMITE_RUTA?'#c0392b':'#7a5a00'}">${n} inasistencia${n!==1?'s':''} en total</b></div>
+     ${n>=FX_LIMITE_RUTA?'<div class="fx-aviso fx-err">Corresponde el reporte de la ruta de prevención.</div>':''}
+     <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+      ${f.id && FX.misFichas.has(f.id)?`<button type="button" class="fx-btn fx-btn-p fx-btn-sm" onclick="fxTomarAsistencia('${f.id}','${x.fecha}')">Revisar mi asistencia de ese día</button>`:''}
+      <button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="fxHistorialAprendiz('${fxEsc(x.documento)}','${fxEsc((x.nombre_aprendiz||'').replace(/'/g,''))}')">Ver historial</button></div></div>`;
+   }).join('');
+ }catch(e){ body.innerHTML = `<div class="fx-aviso fx-err">No se pudieron cargar las alertas. (${fxEsc(e.message)})</div>`; }
+}
+async function fxMarcarRevisadas(){
+ try{
+  await fxReq('lecturas_alertas?on_conflict=usuario_id','POST',{usuario_id: sesionActual.id, visto_hasta: new Date().toISOString()},'resolution=merge-duplicates,return=minimal');
+  FX.nAlertas = 0; fxIrTab('alertas'); fxContarAlertas();
+ }catch(e){ alert('No se pudo actualizar: '+e.message); }
 }
 
 // ── Enganche con el inicio de sesión existente ──
