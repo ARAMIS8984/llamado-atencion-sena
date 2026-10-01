@@ -1817,20 +1817,9 @@ function mostrarCampos(){
  const cdInstr = document.getElementById('cd-instructores-fijo');
  const cdNombre = document.getElementById('cd-nombre-reporta');
 
- if(sesionActual && !sesionActual.es_admin){
- // Instructor normal: se autodefine, no muestra selector
- selectorWrap.style.display = 'none';
- cdInstr.style.display = 'none';
- cdNombre.style.display = 'none';
- qr.value = 'instructor';
- // Prellenar con su propio nombre en el campo oculto de instructores
- const inputInstr = document.getElementById('instructores');
- if(inputInstr && !inputInstr.value) inputInstr.value = sesionActual.nombre;
- } else {
- // Admin o sin sesión: muestra el selector completo
+ // "¿Quién reporta?" es obligatorio para todos: se muestra siempre y se debe elegir
  selectorWrap.style.display = 'block';
  actualizarQuienReporta();
- }
 
  // Validación paso 7: si es instructor no necesita validar quienReporta
  // ya que se autodefine
@@ -1915,7 +1904,13 @@ function validateStep(n){
  if(n===3&&!tipoLlamado){alert('Por favor selecciona el tipo de llamado');return false;}
  if(n===4&&!numeroLlamado){alert('Por favor selecciona el número de llamado');return false;}
  if(n===5&&!faltaSeleccionada){alert('Por favor selecciona el tipo de falta');return false;}
- const checks={1:[['nombreAprendiz','Nombre del aprendiz'],['documento','Número de documento'],['fecha','Fecha de reporte']],2:[['programa','Programa de formación'],['ficha','Número de ficha']],6:[],7:(sesionActual&&!sesionActual.es_admin)?[]:[['quienReporta','¿Quién reporta?']]};
+ if(n===6){
+  const q = document.getElementById('quienReporta');
+  if(!q || !q.value){ alert('Selecciona quién reporta.'); q&&q.focus(); return false; }
+  if(q.value==='instructor' && !(document.getElementById('instructores').value||'').trim()){ alert('Escribe o selecciona el nombre del instructor que reporta.'); document.getElementById('instructores').focus(); return false; }
+  if(!['instructor','equipo'].includes(q.value) && !(document.getElementById('nombreReporta').value||'').trim()){ alert('Escribe el nombre de quien reporta.'); document.getElementById('nombreReporta').focus(); return false; }
+ }
+ const checks={1:[['nombreAprendiz','Nombre del aprendiz'],['documento','Número de documento'],['fecha','Fecha de reporte']],2:[['programa','Programa de formación'],['ficha','Número de ficha']],6:[],7:[['quienReporta','¿Quién reporta?']]};
  for(const[id,label]of(checks[n]||[])){const el=document.getElementById(id);if(!el||!el.value.trim()){alert('Por favor completa: '+label);el&&el.focus();return false;}}
  return true;
 }
@@ -2472,6 +2467,8 @@ function volverInicio(){
  document.getElementById('ficha').value='';
  document.getElementById('programa').value='';
  document.getElementById('instructores').value='';
+ const qrR = document.getElementById('quienReporta'); if(qrR) qrR.value='';
+ const nrR = document.getElementById('nombreReporta'); if(nrR) nrR.value='';
  bloquesMeses=[];
  const bm = document.getElementById('bloques-meses');
  if(bm) bm.innerHTML='';
@@ -2649,6 +2646,10 @@ function cerrarDropdown(dropdownId){
 // QUIÉN REPORTA 
 function actualizarQuienReporta(){
  const val = document.getElementById('quienReporta').value;
+ if(val === 'instructor' && sesionActual && !sesionActual.es_admin){
+  const inp = document.getElementById('instructores');
+  if(inp && !inp.value) inp.value = sesionActual.nombre;
+ }
  const cdNombre = document.getElementById('cd-nombre-reporta');
  const cdInstr = document.getElementById('cd-instructores-fijo');
  const labelNombre = document.getElementById('label-nombre-reporta');
