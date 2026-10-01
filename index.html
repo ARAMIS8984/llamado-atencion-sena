@@ -6189,8 +6189,8 @@ async function fxContarAlertas(){
   if(!nums.length){ FX.nAlertas = 0; }
   else {
    const desde = await fxVistoHasta();
-   const r = await fxReq(`inasistencias?ficha_numero=in.${fxEnc(nums)}&usuario_id=neq.${sesionActual.id}&created_at=gt.${encodeURIComponent(desde)}&select=id`);
-   FX.nAlertas = (r||[]).length;
+   const r = await fxReq(`inasistencias?ficha_numero=in.${fxEnc(nums)}&usuario_id=neq.${sesionActual.id}&created_at=gt.${encodeURIComponent(desde)}&select=documento`);
+   FX.nAlertas = new Set((r||[]).map(x => x.documento)).size;
   }
  }catch(e){ FX.nAlertas = 0; }
  const b = document.getElementById('fx-btn-admin-mias');
@@ -6208,21 +6208,28 @@ async function fxRenderAlertas(){
   const docs = [...new Set(r.map(x => x.documento))];
   const tot = {};
   if(docs.length){ (await fxReq(`inasistencias?documento=in.${fxEnc(docs)}&select=documento`)||[]).forEach(x => tot[x.documento] = (tot[x.documento]||0)+1); }
-  const nuevas = r.filter(x => x.created_at > desde).length;
   if(!r.length){ body.innerHTML = atras + '<div class="fx-card fx-vacio"><p>No hay inasistencias registradas por otros instructores en tus fichas.</p></div>'; return; }
-  body.innerHTML = atras + `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
-    <div class="fx-sobre">${nuevas?`<b>${nuevas} nueva${nuevas!==1?'s':''}</b> · `:''}Revisa si el aprendiz también faltó en tu clase</div>
-    </div>` +
-   r.map(x => {
-    const f = mapa[x.ficha_numero] || {numero:x.ficha_numero};
-    const n = tot[x.documento]||0, nueva = x.created_at > desde;
+  // Una sola notificación por aprendiz, con todos sus reportes adentro (el más reciente primero)
+  const grupos = [], porDoc = {};
+  r.forEach(x => { if(!porDoc[x.documento]){ porDoc[x.documento] = {doc: x.documento, nombre: x.nombre_aprendiz||x.documento, ficha: x.ficha_numero, reportes: []}; grupos.push(porDoc[x.documento]); } porDoc[x.documento].reportes.push(x); });
+  grupos.forEach(g => g.reportes.sort((p,q) => (q.fecha||'').localeCompare(p.fecha||'') || (q.created_at||'').localeCompare(p.created_at||'')));
+  const nuevas = grupos.filter(g => g.reportes.some(x => x.created_at > desde)).length;
+  body.innerHTML = atras + `<div class="fx-sobre" style="margin-bottom:8px;">${nuevas?`<b>${nuevas} aprendiz${nuevas!==1?'es':''} con reportes nuevos</b> · `:''}Revisa si el aprendiz también faltó en tu clase</div>` +
+   grupos.map(g => {
+    const f = mapa[g.ficha] || {numero:g.ficha};
+    const n = tot[g.doc]||0, nueva = g.reportes.some(x => x.created_at > desde);
+    const mia = f.id && FX.misFichas.has(f.id);
     return `<div class="fx-card" style="padding:12px;${nueva?'border-color:#f3c2bc;':''}">
-     <div style="display:flex;justify-content:space-between;gap:8px;"><div style="font-weight:600;font-size:13px;">${fxEsc(x.nombre_aprendiz||x.documento)}</div>${nueva?'<span class="fx-pill" style="background:#fdecea;color:#c0392b;">Nueva</span>':''}</div>
-     <div class="fx-muted">Ausente el ${fxFechaCorta(x.fecha)} en la clase de ${fxEsc(x.instructor_nombre||'')}<br>Ficha ${fxEtiqueta(f)} · <b style="color:${n>=FX_LIMITE_RUTA?'#c0392b':'#7a5a00'}">${n} inasistencia${n!==1?'s':''} en total</b></div>
+     <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;"><div style="font-weight:700;font-size:14px;">${fxEsc(g.nombre)}</div>${nueva?'<span class="fx-pill" style="background:#fdecea;color:#c0392b;flex:0 0 auto;">Nuevo</span>':''}</div>
+     <div class="fx-muted">Ficha ${fxEtiqueta(f)} · <b style="color:${n>=FX_LIMITE_RUTA?'#c0392b':'#7a5a00'}">${n} inasistencia${n!==1?'s':''} en total</b></div>
      ${n>=FX_LIMITE_RUTA?'<div class="fx-aviso fx-err">Corresponde el reporte de la ruta de prevención.</div>':''}
-     <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-      ${f.id && FX.misFichas.has(f.id)?`<button type="button" class="fx-btn fx-btn-p fx-btn-sm" onclick="fxTomarAsistencia('${f.id}','${x.fecha}')">Revisar mis inasistencias de ese día</button>`:''}
-      <button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="fxHistorialAprendiz('${fxEsc(x.documento)}','${fxEsc((x.nombre_aprendiz||'').replace(/'/g,''))}')">Ver historial</button></div></div>`;
+     <div style="margin-top:8px;border-top:1px solid #f0f0f0;">
+      ${g.reportes.map(x => `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f5f5f5;font-size:12px;">
+        <span style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${x.created_at > desde ? '#e41e3f' : '#d5dbd3'};"></span>
+        <span style="flex:1;min-width:0;">Ausente el <b>${fxFechaCorta(x.fecha)}</b> · clase de ${fxEsc(x.instructor_nombre||'')}</span>
+        ${mia?`<a href="#" onclick="event.preventDefault();fxTomarAsistencia('${f.id}','${x.fecha}')" style="color:#1565c0;white-space:nowrap;">Revisar ese día</a>`:''}</div>`).join('')}
+     </div>
+     <div style="margin-top:8px;"><button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="fxHistorialAprendiz('${fxEsc(g.doc)}','${fxEsc((g.nombre||'').replace(/'/g,''))}')">Ver historial completo</button></div></div>`;
    }).join('');
   // Como en las apps de mensajería: al abrir las notificaciones se dan por vistas y el número rojo desaparece
   if(nuevas){ fxReq('lecturas_alertas?on_conflict=usuario_id','POST',{usuario_id: sesionActual.id, visto_hasta: new Date().toISOString()},'resolution=merge-duplicates,return=minimal').then(() => { FX.nAlertas = 0; fxPintarCampanas(); }).catch(()=>{}); }
