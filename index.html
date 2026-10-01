@@ -2235,9 +2235,9 @@ function generarPDF(){
  // PRIMER LLAMADO: la sección 3 continúa justo después de la sección 2.
  // La firma va anclada al pie de la última página; si el párrafo no cabe completo
  // junto con la firma, pasan a la página siguiente solo las últimas líneas.
- // La firma va SIEMPRE 50 mm debajo del último párrafo. Si no cabe, pasan a la página
+ // La firma va SIEMPRE 70 mm debajo del último párrafo. Si no cabe, pasan a la página
  // siguiente las últimas líneas del párrafo junto con la firma.
- const SEP_FIRMA = 50, LIMITE_FIRMA = PAGE_H - 10;
+ const SEP_FIRMA = 70, LIMITE_FIRMA = PAGE_H - 10;
  const BLOQUE_FIRMA = SEP_FIRMA + 5*getCargoFirmante().split('\n').length + 2;
  const segS3 = [
  {t:'La presente comunicación corresponde a un '},
@@ -2262,7 +2262,7 @@ function generarPDF(){
  y=writeJustified('3. Medidas formativas aplicada', y, true); y+=4;
  y=writeJustifiedMixed(segS3, y, corte);
 
- // Pie primer llamado — firma 50 mm debajo de la última línea del párrafo
+ // Pie primer llamado — firma 70 mm debajo de la última línea del párrafo
  let yFirma = (y - LINEA) + SEP_FIRMA;
  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...BLACK);
  doc.text(getFirmante().toUpperCase(), ml, yFirma);
@@ -2276,7 +2276,7 @@ function generarPDF(){
  const TITULO_S3_H = 8;
  const PARRAFO_S3_ESTIMADO = 70;
  const FIRMA_S3_H = 22;
- const SEP_FIRMA2 = 50, LINEA2 = 5.5, LIMITE_FIRMA2 = PAGE_H - 10;
+ const SEP_FIRMA2 = 70, LINEA2 = 5.5, LIMITE_FIRMA2 = PAGE_H - 10;
  const BLOQUE_FIRMA2 = SEP_FIRMA2 + 5 + 5*getCargoFirmante().split('\n').length + 2;
  // Escribe el último párrafo dejando espacio para la firma; si no cabe, sus últimas líneas pasan con la firma
  const parrafoFinal = (segs, sy) => {
@@ -2381,7 +2381,7 @@ function generarPDF(){
  ],y);
  }
 
- // Firma: línea a 50 mm debajo de la última línea del último párrafo
+ // Firma: línea a 70 mm debajo de la última línea del último párrafo
  const firmaW = 75;
  let FIRMA_Y_BASE = (y - LINEA2) + SEP_FIRMA2;
  doc.setDrawColor(...BLACK);
