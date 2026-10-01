@@ -4154,7 +4154,7 @@ function generarPlanPDF(){
 
  doc2.setTextColor(0,0,0); doc2.setFont('helvetica','normal'); doc2.setFontSize(10);
 
- const PAGE_BOTTOM = 270;
+ const PAGE_BOTTOM = 282; // margen inferior de 15 mm, igual al superior
 
  function nuevaPagina(){
    doc2.addPage();
@@ -4191,6 +4191,17 @@ function generarPlanPDF(){
    return maxH;
  }
 
+ // Alto que ocupará una fila sin dibujarla (para no dejar títulos o encabezados solos al final de la hoja)
+ function altoFila(cols, colWidths, isHeader=false){
+   doc2.setFontSize(9.5);
+   let maxH = 0;
+   cols.forEach((text,i)=>{
+     doc2.setFont('helvetica', isHeader?'bold':'normal');
+     const h = doc2.splitTextToSize(text||'', colWidths[i] - 5).length * 4.8 + 7;
+     if(h > maxH) maxH = h;
+   });
+   return maxH;
+ }
  function drawBloqueParrafos(textos, yIni){
    const PAD_X = 2.5, PAD_Y = 3.5, LINE_H = 4.8, GAP = 3;
    doc2.setFontSize(9.5); doc2.setFont('helvetica','normal'); doc2.setTextColor(...BLACK);
@@ -4277,9 +4288,13 @@ function generarPlanPDF(){
  y+=SEP_BLOQUES;
 
  // Sección 2 — solo competencias SELECCIONADAS (título, encabezado y al menos una fila juntos)
- if(y > PAGE_BOTTOM-35){ y = nuevaPagina(); }
- h = drawRow(['2. INFORMACIÓN DEL PROGRAMA DE FORMACIÓN'], [cw], y, true); y+=h;
  const w3=[cw*0.30, cw*0.45, cw*0.25];
+ {
+  const sel = competencias.filter(c=>c.sel), c0 = sel[0] || {};
+  const alto = altoFila(['2. INFORMACIÓN DEL PROGRAMA DE FORMACIÓN'],[cw],true) + altoFila(['COMPETENCIA','RESULTADO DE APRENDIZAJE','CONOCIMIENTO'],w3,true) + altoFila([c0.comp||'', c0.ra||'', c0.conocimiento||''],w3);
+  if(y + alto > PAGE_BOTTOM){ y = nuevaPagina(); }
+ }
+ h = drawRow(['2. INFORMACIÓN DEL PROGRAMA DE FORMACIÓN'], [cw], y, true); y+=h;
  h = drawRow(['COMPETENCIA','RESULTADO DE APRENDIZAJE','CONOCIMIENTO'], w3, y, true); y+=h;
  const compSeleccionadas = competencias.filter(c=>c.sel);
  if(compSeleccionadas.length === 0){
@@ -4292,9 +4307,14 @@ function generarPlanPDF(){
  y+=SEP_BLOQUES;
 
  // Sección 3 (título, encabezado y al menos una fila juntos)
- if(y > PAGE_BOTTOM-35){ y = nuevaPagina(); }
- h = drawRow(['3. DESCRIPCIÓN DE ACTIVIDADES Y EVIDENCIAS'], [cw], y, true); y+=h;
  const w4=[cw*0.35, cw*0.35, cw*0.30];
+ {
+  const a0 = actividades[0] || {}, f0 = a0.fecha || pv('p-fecha-fin');
+  const d0 = (a0.descripcion||'').trim() + (f0 ? '\n\nFecha de entrega: ' + fechaLetras2(f0) + '.' : '');
+  const alto = altoFila(['3. DESCRIPCIÓN DE ACTIVIDADES Y EVIDENCIAS'],[cw],true) + altoFila(['ACTIVIDAD DE MEJORAMIENTO','DESCRIPCIÓN DE LA ACTIVIDAD','EVIDENCIA'],w4,true) + altoFila([a0.actividad||'', d0, a0.evidencia||''],w4);
+  if(y + alto > PAGE_BOTTOM){ y = nuevaPagina(); }
+ }
+ h = drawRow(['3. DESCRIPCIÓN DE ACTIVIDADES Y EVIDENCIAS'], [cw], y, true); y+=h;
  h = drawRow(['ACTIVIDAD DE MEJORAMIENTO','DESCRIPCIÓN DE LA ACTIVIDAD','EVIDENCIA'], w4, y, true); y+=h;
  actividades.forEach(a=>{
    const fEnt = a.fecha || pv('p-fecha-fin');
