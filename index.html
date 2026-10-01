@@ -4064,7 +4064,8 @@ function generarPlanPDF(){
  const GREEN_BORDER = [39,126,45];
  const GREEN_BANNER = [200,230,201];
  const GRAY_BG = [245,245,245];
- const AZUL_ETIQ = [222,235,247]; // azul pastel suave para las etiquetas del encabezado
+ const VERDE_1 = [118,147,60];   // primer verde: banda del título de la sección 1
+ const AZUL_ETIQ = [195,216,155]; // segundo verde: etiquetas del encabezado
  const tipoPlan = document.getElementById('p-tipo-plan')?.value || 'academico';
  const tituloTipoPlan = tipoPlan==='disciplinario' ? 'DISCIPLINARIO' : 'ACADÉMICO';
 
@@ -4093,10 +4094,11 @@ function generarPlanPDF(){
 
  // Banner verde — "1. INFORMACIÓN GENERAL..."
  const bannerH = 8;
- doc2.setDrawColor(180,180,180); doc2.setLineWidth(0.3);
- doc2.line(ml, y+bannerH, ml+cw, y+bannerH);
- doc2.setFont('helvetica','bold'); doc2.setFontSize(9.5); doc2.setTextColor(0,0,0);
+ doc2.setFillColor(...VERDE_1); doc2.setDrawColor(180,180,180); doc2.setLineWidth(0.3);
+ doc2.rect(ml, y, cw, bannerH, 'FD');
+ doc2.setFont('helvetica','bold'); doc2.setFontSize(9.5); doc2.setTextColor(255,255,255);
  doc2.text('1. INFORMACIÓN GENERAL DEL PLAN DE MEJORAMIENTO '+tituloTipoPlan, ml+3, y+5.5);
+ doc2.setTextColor(0,0,0);
  y += bannerH;
 
  // Tabla de datos — todas las celdas en blanco, mismo tono
@@ -4130,7 +4132,7 @@ function generarPlanPDF(){
    return parseInt(dd)+' de '+meses[parseInt(mm)-1]+' de '+yy;
  }
  let h2r;
- h2r=drawDataRow('Nombre del aprendiz:', (pv('p-nombre')||'').toUpperCase(), y); y+=h2r;
+ h2r=drawDataRow('NOMBRE DEL APRENDIZ:', (pv('p-nombre')||'').toUpperCase(), y); y+=h2r;
  // Fila documento + ficha
  const docLabelW = col1p, fichaLabelWp = 14, fichaValWp = 30, docValW = cw - docLabelW - fichaLabelWp - fichaValWp;
  doc2.setDrawColor(...BORDE); doc2.setLineWidth(0.3);
@@ -4142,13 +4144,13 @@ function generarPlanPDF(){
  doc2.rect(ml+docLabelW+docValW+fichaLabelWp, y, fichaValWp, rowH2, 'FD');
  doc2.setFontSize(9.5); doc2.setTextColor(0,0,0);
  doc2.setFont('helvetica','bold');
- doc2.text('Número de documento:', ml+2.5, y+4.8);
- doc2.text('Ficha:', ml+docLabelW+docValW+2, y+4.8);
+ doc2.text('NÚMERO DE DOCUMENTO:', ml+2.5, y+4.8);
+ doc2.text('FICHA:', ml+docLabelW+docValW+2, y+4.8);
  doc2.setFont('helvetica','normal');
  doc2.text(pv('p-documento')||'', ml+docLabelW+2.5, y+4.8);
  doc2.text(pv('p-ficha')||'', ml+docLabelW+docValW+fichaLabelWp+2, y+4.8);
  y+=rowH2;
- h2r=drawDataRow('Programa de formación:', pv('p-programa')||'', y); y+=h2r;
+ h2r=drawDataRow('PROGRAMA DE FORMACIÓN:', pv('p-programa')||'', y); y+=h2r;
 
  doc2.setTextColor(0,0,0); doc2.setFont('helvetica','normal'); doc2.setFontSize(10);
 
@@ -4219,7 +4221,7 @@ function generarPlanPDF(){
  h = drawDataRow('FICHA/GRUPO:', pv('p-ficha'), y); y+=h;
  h = drawDataRow('INSTRUCTOR RESPONSABLE:', pv('p-instructor'), y); y+=h;
  h = drawDataRow('REGIONAL/CENTRO DE FORMACIÓN/SEDE:', CENTRO, y); y+=h;
- h = drawDataRow('CIUDAD Y FECHA:', 'Barranquilla, '+fechaLetras2(pv('p-fecha')), y); y+=h;
+ h = drawDataRow('CIUDAD Y FECHA DEL REGISTRO:', 'Barranquilla, '+fechaLetras2(pv('p-fecha')), y); y+=h;
  h = drawDataRow('FECHA DE INICIO DEL PLAN DE MEJORAMIENTO:', fechaLetras2(pv('p-fecha-inicio')), y); y+=h;
  h = drawDataRow('FECHA DE TERMINACIÓN DEL PLAN DE MEJORAMIENTO:', fechaLetras2(pv('p-fecha-fin')), y); y+=h;
 
