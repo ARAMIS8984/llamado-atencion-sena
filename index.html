@@ -5437,7 +5437,7 @@ function fxPintarTarjetaHome(){
   mias.onclick = () => fxAbrir('asis');
   grid.insertBefore(mias, grid.firstChild);
  }
- mias.innerHTML = `<div class="menu-info"><h3>Registro de asistencia</h3><p>Toma asistencia en tus fichas. Desde aquí también asocias tus fichas con su competencia y resultados</p></div><span class="menu-arrow">›</span>`;
+ mias.innerHTML = `<div class="menu-info"><h3>Registro de asistencia</h3><p>Toma asistencia en tus fichas. Desde aquí también asocias las fichas de tu horario</p></div><span class="menu-arrow">›</span>`;
  // Tarjeta adicional solo para líderes y administradores: cargar fichas del programa
  let prog = document.getElementById('fx-card-programa');
  if(fxEsLider() || fxEsAdmin()){
@@ -5544,11 +5544,11 @@ async function fxRenderAsis(){
     <div style="width:42px;height:42px;border-radius:12px;background:#EAF3DE;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">
      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#27500A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
     <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:15px;">Mis fichas</div>
-     <div class="fx-muted">Asocia o quita fichas y define la competencia y los resultados de aprendizaje que orientas</div></div>
+     <div class="fx-muted">Asocia o quita las fichas a las que les tomas asistencia</div></div>
     <span style="color:#27500A;font-size:20px;">›</span></div>`;
   if(!mias.length){
    body.innerHTML = herramienta + `<div class="fx-card fx-vacio"><h3>Aún no tienes fichas para tomar asistencia</h3>
-    <p>Entra a <b>Mis fichas</b> y asocia los grupos que tienes en tu horario, con la competencia y los resultados de aprendizaje que orientas.</p>
+    <p>Entra a <b>Mis fichas</b> y asocia los grupos que tienes en tu horario.</p>
     <button type="button" class="fx-btn fx-btn-p" onclick="fxIrTab('mias')">Ir a Mis fichas</button></div>`;
    return;
   }
@@ -5557,7 +5557,7 @@ async function fxRenderAsis(){
     return `<div class="fx-ficha" style="cursor:pointer;" onclick="fxTomarAsistencia('${f.id}')">
      <div class="fx-ficha-info"><div class="fx-ficha-num">${fxEtiqueta(f)}</div>
       <div class="fx-muted">${f.nApr} aprendices${c.competencia?' · '+fxEsc(c.competencia.length>70?c.competencia.slice(0,70)+'…':c.competencia):''}</div>
-      ${c.competencia?'':'<div class="fx-aviso" style="margin-top:6px;">Falta definir la competencia y los resultados.</div>'}</div>
+</div>
      <span class="fx-btn fx-btn-p fx-btn-sm" style="pointer-events:none;">Tomar asistencia</span></div>`; }).join('');
  }catch(e){ body.innerHTML = `<div class="fx-aviso fx-err">No se pudieron cargar tus fichas. (${fxEsc(e.message)})</div>`; }
 }
@@ -5584,7 +5584,7 @@ async function fxRenderMias(){
     <div class="fx-ficha"><div class="fx-ficha-info"><div class="fx-ficha-num">${fxEtiqueta(f)}</div>
      <div class="fx-muted">${f.nApr} ${f.nApr!==1?'aprendices':'aprendiz'} en formación</div>
      ${(FX.misAsoc[f.id]||{}).competencia ? `<div style="font-size:12px;margin-top:6px;line-height:1.4;color:#27500A;"><b>Competencia:</b> ${fxEsc(FX.misAsoc[f.id].competencia)}<br><span class="fx-muted">${FX.misAsoc[f.id].resultados.length} resultado${FX.misAsoc[f.id].resultados.length!==1?'s':''} de aprendizaje · <a href="#" onclick="event.preventDefault();fxDefinirCompetencia('${f.id}','mias')" style="color:#1565c0;">Cambiar</a></span></div>`
-       : `<div class="fx-aviso" style="margin-top:6px;">Falta definir la competencia y los resultados que orientas. <a href="#" onclick="event.preventDefault();fxDefinirCompetencia('${f.id}','mias')" style="color:#1565c0;font-weight:600;">Definir ahora</a></div>`}</div>
+       : `<div class="fx-muted" style="margin-top:4px;"><a href="#" onclick="event.preventDefault();fxDefinirCompetencia('${f.id}','mias')" style="color:#1565c0;">Agregar competencia y resultados (opcional)</a></div>`}</div>
      <div class="fx-ficha-acc"><button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="fxVerAprendices('${f.id}')">Aprendices</button>
      <button type="button" class="fx-btn fx-btn-d fx-btn-sm" onclick="fxDesasociar('${f.id}')">Quitar</button></div></div>`).join('')).join('');
  }catch(e){ body.innerHTML = `<div class="fx-aviso fx-err">No se pudieron cargar tus fichas. Revisa la conexión. (${fxEsc(e.message)})</div>`; }
@@ -5638,7 +5638,17 @@ function fxPintarAsociar(){
   }).join('') : '<div class="fx-aviso">Este programa todavía no tiene fichas cargadas. Las carga el líder del programa desde el Reporte de Juicios Evaluativos.</div>');
 }
 async function fxToggleAsociar(fid){
- if(!FX.misFichas.has(fid)){ fxDefinirCompetencia(fid, 'asociar'); return; }
+ if(!FX.misFichas.has(fid)){
+  const b = document.getElementById('fx-asoc-'+fid); if(b){ b.disabled = true; b.textContent = 'Asociando...'; }
+  try{
+   await fxReq('instructor_fichas','POST',{usuario_id:sesionActual.id, ficha_id:fid},'resolution=ignore-duplicates,return=minimal');
+   FX.misFichas.add(fid);
+   const f = fxTodasParaAsociar.find(x => x.id===fid); if(f) f.nIns += 1;
+   FX.volverA = FX.tab;
+   fxPintarAsociar();
+  }catch(e){ alert('No se pudo asociar: '+e.message); if(b){ b.disabled = false; b.textContent = 'Asociar'; } }
+  return;
+ }
  const f = fxTodasParaAsociar.find(x => x.id===fid) || FX.fichasCache[fid] || {};
  if(!confirm(`¿Quitar la ficha ${f.numero||''}${f.grupo?' – '+f.grupo:''} de tu perfil?`)) return;
  try{
@@ -6023,8 +6033,6 @@ async function fxTomarAsistencia(fid, fecha){
  const f = FX.fichasCache[fid];
  if(!f) return;
  if(!FX.misAsoc || !FX.misAsoc[fid]) await fxTraerMias();
- const asoc = (FX.misAsoc||{})[fid];
- if(FX.misFichas.has(fid) && (!asoc || !asoc.competencia)){ fxDefinirCompetencia(fid, 'asistencia'); return; }
  FX.asis = { fid, f, fecha: fecha || fxHoy(), marcas: {}, previas: new Set(), sesionId: null, aps: [], conteo: {} };
  const body = document.getElementById('fx-body');
  body.innerHTML = '<div class="fx-sobre" style="padding:20px;text-align:center;">Cargando aprendices...</div>';
