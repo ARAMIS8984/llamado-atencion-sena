@@ -4191,6 +4191,17 @@ function generarPlanPDF(){
    return maxH;
  }
 
+ // Títulos de sección (2, 3 y 4) con el mismo verde y letra blanca del título 1
+ const TITULO_SEC_H = 8;
+ function drawTituloSeccion(texto, rowY){
+   if(rowY + TITULO_SEC_H > PAGE_BOTTOM){ rowY = nuevaPagina(); y = rowY; }
+   doc2.setFillColor(...VERDE_1); doc2.setDrawColor(180,180,180); doc2.setLineWidth(0.3);
+   doc2.rect(ml, rowY, cw, TITULO_SEC_H, 'FD');
+   doc2.setFont('helvetica','bold'); doc2.setFontSize(9.5); doc2.setTextColor(255,255,255);
+   doc2.text(texto, ml+3, rowY+5.5);
+   doc2.setTextColor(0,0,0);
+   return TITULO_SEC_H;
+ }
  // Alto que ocupará una fila sin dibujarla (para no dejar títulos o encabezados solos al final de la hoja)
  function altoFila(cols, colWidths, isHeader=false){
    doc2.setFontSize(9.5);
@@ -4291,10 +4302,10 @@ function generarPlanPDF(){
  const w3=[cw*0.30, cw*0.45, cw*0.25];
  {
   const sel = competencias.filter(c=>c.sel), c0 = sel[0] || {};
-  const alto = altoFila(['2. INFORMACIÓN DEL PROGRAMA DE FORMACIÓN'],[cw],true) + altoFila(['COMPETENCIA','RESULTADO DE APRENDIZAJE','CONOCIMIENTO'],w3,true) + altoFila([c0.comp||'', c0.ra||'', c0.conocimiento||''],w3);
+  const alto = TITULO_SEC_H + altoFila(['COMPETENCIA','RESULTADO DE APRENDIZAJE','CONOCIMIENTO'],w3,true) + altoFila([c0.comp||'', c0.ra||'', c0.conocimiento||''],w3);
   if(y + alto > PAGE_BOTTOM){ y = nuevaPagina(); }
  }
- h = drawRow(['2. INFORMACIÓN DEL PROGRAMA DE FORMACIÓN'], [cw], y, true); y+=h;
+ h = drawTituloSeccion('2. INFORMACIÓN DEL PROGRAMA DE FORMACIÓN', y); y+=h;
  h = drawRow(['COMPETENCIA','RESULTADO DE APRENDIZAJE','CONOCIMIENTO'], w3, y, true); y+=h;
  const compSeleccionadas = competencias.filter(c=>c.sel);
  if(compSeleccionadas.length === 0){
@@ -4311,10 +4322,10 @@ function generarPlanPDF(){
  {
   const a0 = actividades[0] || {}, f0 = a0.fecha || pv('p-fecha-fin');
   const d0 = (a0.descripcion||'').trim() + (f0 ? '\n\nFecha de entrega: ' + fechaLetras2(f0) + '.' : '');
-  const alto = altoFila(['3. DESCRIPCIÓN DE ACTIVIDADES Y EVIDENCIAS'],[cw],true) + altoFila(['ACTIVIDAD DE MEJORAMIENTO','DESCRIPCIÓN DE LA ACTIVIDAD','EVIDENCIA'],w4,true) + altoFila([a0.actividad||'', d0, a0.evidencia||''],w4);
+  const alto = TITULO_SEC_H + altoFila(['ACTIVIDAD DE MEJORAMIENTO','DESCRIPCIÓN DE LA ACTIVIDAD','EVIDENCIA'],w4,true) + altoFila([a0.actividad||'', d0, a0.evidencia||''],w4);
   if(y + alto > PAGE_BOTTOM){ y = nuevaPagina(); }
  }
- h = drawRow(['3. DESCRIPCIÓN DE ACTIVIDADES Y EVIDENCIAS'], [cw], y, true); y+=h;
+ h = drawTituloSeccion('3. DESCRIPCIÓN DE ACTIVIDADES Y EVIDENCIAS', y); y+=h;
  h = drawRow(['ACTIVIDAD DE MEJORAMIENTO','DESCRIPCIÓN DE LA ACTIVIDAD','EVIDENCIA'], w4, y, true); y+=h;
  actividades.forEach(a=>{
    const fEnt = a.fecha || pv('p-fecha-fin');
@@ -4334,7 +4345,7 @@ function generarPlanPDF(){
   ].reduce((sum,t) => sum + doc2.splitTextToSize(t, cw - 10).length*4.8 + 2.5, 0);
   if(y + 12 + altoObs > PAGE_BOTTOM){ y = nuevaPagina(); }
  }
- h = drawRow(['4. OBSERVACIONES'], [cw], y, true); y+=h;
+ h = drawTituloSeccion('4. OBSERVACIONES', y); y+=h;
  // Observaciones con viñetas
  const obsItems = [
   'Esta medida tiene un carácter formativo y correctivo; por ello, se espera el compromiso del aprendiz con la entrega oportuna de las evidencias, en las fechas establecidas en el presente documento, y con el cumplimiento de los criterios de evaluación.',
