@@ -881,11 +881,6 @@ window.addEventListener('load', ()=>{
  <label>Coordinador académico (firma)</label>
  <input type="text" id="coordinadorLlamado" value="Isabel Cristina Niño Camacho" placeholder="Nombre del coordinador académico">
  </div>
- <div class="field full" id="cd-coord-form" style="display:none;">
- <label>Firma de la Coordinadora de Formación Profesional</label>
- <div style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#f3faf1;font-weight:600;">CRISTINA PATRICIA NAVARRO CORRALES</div>
- <div style="font-size:11px;color:var(--muted);margin-top:4px;">Va fija en todos los llamados de atención disciplinarios.</div>
- </div>
 
  <div class="field full" id="cd-instructores-fijo" style="display:none;">
  <label>Nombre del instructor</label>
@@ -1788,7 +1783,9 @@ const RECS_DISC_POR_FALTA = {
  ]
 };
 let recsDisc = [], recsDiscFalta = '';
-function recsDiscPorDefecto(f){ return (RECS_DISC_POR_FALTA[f] || RECS_DISC_GENERAL).slice(); }
+// Recomendación que va al final de todas las listas disciplinarias (antes era un párrafo antes de las firmas)
+const REC_DISC_ACTA = 'Como evidencia del conocimiento y aceptación de las recomendaciones antes descritas, el aprendiz deberá firmar un Acta de Compromiso Disciplinario, comprometiéndose a cumplir las acciones de mejora establecidas para corregir las situaciones evidenciadas.';
+function recsDiscPorDefecto(f){ return (RECS_DISC_POR_FALTA[f] || RECS_DISC_GENERAL).concat([REC_DISC_ACTA]); }
 function prepararRecsDisc(){
  const card = document.getElementById('card-recs-disc');
  const aplica = tipoLlamado==='disciplinario' && numeroLlamado==='segundo';
@@ -1930,7 +1927,7 @@ function validateStep(n){
   const q = document.getElementById('quienReporta');
   if(!q || !q.value){ alert('Selecciona quién reporta.'); q&&q.focus(); return false; }
   const co = document.getElementById('coordinadorLlamado');
-  if(co && tipoLlamado !== 'disciplinario' && !co.value.trim()){ alert('Escribe el nombre del coordinador académico que firma el llamado.'); co.focus(); return false; }
+  if(co && !co.value.trim()){ alert('Escribe el nombre del coordinador académico que firma el llamado.'); co.focus(); return false; }
   if(q.value==='instructor' && !(document.getElementById('instructores').value||'').trim()){ alert('Escribe o selecciona el nombre del instructor que reporta.'); document.getElementById('instructores').focus(); return false; }
  }
  const checks={1:[['nombreAprendiz','Nombre del aprendiz'],['documento','Número de documento'],['fecha','Fecha de reporte']],2:[['programa','Programa de formación'],['ficha','Número de ficha']],6:[],7:[['quienReporta','¿Quién reporta?']]};
@@ -2351,19 +2348,13 @@ function generarPDF(){
  y+=2;
  }
  y+=6;
- y=checkPage(y, 5.5*3);
- y=writeJustifiedMixed([
+ y=parrafoFinal([
  {t:'Se informa que '},
  {t:'el incumplimiento de las recomendaciones', b:true},
  {t:' aquí establecidas o la persistencia de las conductas que dieron origen al presente llamado de atención dará lugar a la aplicación de la siguiente medida formativa, consistente en la formulación y ejecución de un '},
  {t:'Plan de Mejoramiento Disciplinario', b:true},
  {t:', conforme a lo dispuesto en el '},
  {t:'Acuerdo 0009 de 2024 del Reglamento del Aprendiz SENA.', b:true}
- ],y); y+=8;
- y=parrafoFinal([
- {t:'Como evidencia del conocimiento y aceptación de las recomendaciones antes descritas, '},
- {t:'el aprendiz deberá firmar un Acta de Compromiso Disciplinario', b:true},
- {t:', comprometiéndose a cumplir las acciones de mejora establecidas para corregir las situaciones evidenciadas.'}
  ],y);
 
  } else {
@@ -2592,7 +2583,7 @@ function buildPreviewHTML(){
  <ul style="margin:0 0 16px 18px;padding:0;">${recs.map(r=>`<li style="text-align:justify;margin-bottom:6px;"><strong>${r}</strong></li>`).join('')}</ul>
  <hr style="border:none;border-top:1px solid #ccc;margin:18px 0;">
  <p style="text-align:justify;margin-bottom:10px;"><strong>Se informa que el incumplimiento de las recomendaciones aquí establecidas o la persistencia de las conductas que dieron origen al presente llamado de atención dará lugar a la aplicación de la siguiente medida formativa, consistente en la formulación y ejecución de un Plan de Mejoramiento ${tipoLlamado==='disciplinario'?'Disciplinario':'Académico'}, conforme a lo dispuesto en el Acuerdo 0009 de 2024 del Reglamento del Aprendiz SENA.</strong></p>
- <p style="text-align:justify;margin-bottom:24px;"><strong>Como evidencia del conocimiento y aceptación de las recomendaciones antes descritas, el aprendiz deberá firmar un Acta de Compromiso ${tipoLlamado==='disciplinario'?'Disciplinario':'Académico'}, comprometiéndose a cumplir las acciones de mejora establecidas para corregir las situaciones evidenciadas.</strong></p>
+${tipoLlamado==='disciplinario' ? '' : ` <p style="text-align:justify;margin-bottom:24px;"><strong>Como evidencia del conocimiento y aceptación de las recomendaciones antes descritas, el aprendiz deberá firmar un Acta de Compromiso ${tipoLlamado==='disciplinario'?'Disciplinario':'Académico'}, comprometiéndose a cumplir las acciones de mejora establecidas para corregir las situaciones evidenciadas.</strong></p>`}
  <div style="margin-top:16px;display:flex;gap:24px;flex-wrap:wrap;">
  <div style="flex:1;min-width:180px;border-top:2px solid #333;padding-top:6px;"><strong>${getFirmante().toUpperCase()}</strong><br>${getCargoFirmante().replace('\n','<br>')}</div>
  ${firmaCoordinadorLlamado() ? `<div style="flex:1;min-width:180px;border-top:2px solid #333;padding-top:6px;"><strong>${firmaCoordinadorLlamado().nombre.toUpperCase()}</strong><br>${firmaCoordinadorLlamado().cargo.replace('\n','<br>')}</div>` : ''}
@@ -3236,11 +3227,12 @@ function getHTMLUsuarios(){
  <input type="hidden" id="form-usuario-id">
  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
  <div><label style="font-size:12px;color:#555;display:block;margin-bottom:3px;">Nombre completo</label>
- <input id="form-nombre" type="text" placeholder="Nombre completo" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;"></div>
+ <input id="form-nombre" type="text" placeholder="Nombre completo" oninput="previsualizarUsuario()" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;"></div>
  <div><label style="font-size:12px;color:#555;display:block;margin-bottom:3px;">Usuario</label>
- <input id="form-usuario" type="text" placeholder="ej: abarriosoro" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;"></div>
- <div><label style="font-size:12px;color:#555;display:block;margin-bottom:3px;">Contraseña</label>
- <input id="form-password" type="password" placeholder="Nueva contraseña" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;"></div>
+ <input id="form-usuario" type="text" placeholder="Se genera con el nombre" readonly style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;background:#f3f6f9;color:#1565c0;font-weight:600;"></div>
+ <div><label style="font-size:12px;color:#555;display:block;margin-bottom:3px;">Contraseña inicial</label>
+ <div id="form-password-info" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;background:#f3f6f9;font-weight:600;">Sena2026*</div>
+ <input id="form-password" type="hidden"></div>
  <div><label style="font-size:12px;color:#555;display:block;margin-bottom:3px;">Cargo</label>
  <select id="form-cargo" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
  <option value="instructor">Instructor</option>
@@ -3432,20 +3424,73 @@ async function guardarNuevaPassword(){
  } catch(e){ err.textContent='Error al actualizar. Intenta de nuevo.'; err.style.display='block'; }
 }
 
+// ── USUARIO AUTOMÁTICO ──
+// Regla de la plataforma: inicial del primer nombre + primer apellido + 3 primeras letras del segundo apellido.
+// Sin tildes, sin ñ, sin espacios y en minúscula. Ej: Aramis Daniel Vitola Francis → avitolafra
+function generarUsuarioBase(nombre){
+ const w = String(nombre||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+  .replace(/ñ/g,'n').replace(/[^a-z\s]/g,' ').split(/\s+/).filter(Boolean)
+  .filter((x,i) => i === 0 || !['de','del','la','las','los','y'].includes(x)); // "De Ávila", "De La Hoz", "Del Carmen"…
+ if(!w.length) return '';
+ let a1 = '', a2 = '';
+ if(w.length >= 4){ a1 = w[w.length-2]; a2 = w[w.length-1]; }
+ else if(w.length === 3){ a1 = w[1]; a2 = w[2]; }
+ else if(w.length === 2){ a1 = w[1]; }
+ return (w[0][0] + a1 + a2.slice(0,3)).replace(/[^a-z]/g,'');
+}
+function normNombreUsuario(n){ return String(n||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
+async function usuariosExistentes(){ return await sbFetch('usuarios?select=id,nombre,usuario') || []; }
+// Devuelve un usuario libre: base, base2, base3...
+function usuarioLibre(base, ocupados){
+ if(!ocupados.has(base)) return base;
+ let i = 2; while(ocupados.has(base + i)) i++;
+ return base + i;
+}
+let _usrPreviewTimer = null, _usrOcupados = null;
+function previsualizarUsuario(){
+ if(document.getElementById('form-usuario-id').value) return; // al editar no se cambia el usuario
+ const base = generarUsuarioBase(document.getElementById('form-nombre').value);
+ const out = document.getElementById('form-usuario');
+ out.value = base;
+ clearTimeout(_usrPreviewTimer);
+ if(!base) return;
+ _usrPreviewTimer = setTimeout(async () => {
+  try{
+   if(!_usrOcupados) _usrOcupados = new Set((await usuariosExistentes()).map(u => u.usuario));
+   const b2 = generarUsuarioBase(document.getElementById('form-nombre').value);
+   if(b2) out.value = usuarioLibre(b2, _usrOcupados);
+  }catch(e){}
+ }, 300);
+}
+function mostrarCredenciales(lista){
+ const txt = lista.map(u => `${u.nombre}\nUsuario: ${u.usuario}\nContraseña: Sena2026*`).join('\n\n');
+ let m = document.getElementById('modal-credenciales');
+ if(!m){ m = document.createElement('div'); m.id = 'modal-credenciales'; document.body.appendChild(m); }
+ m.style.cssText = 'position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;';
+ m.innerHTML = `<div style="background:#fff;border-radius:14px;padding:20px;max-width:420px;width:100%;max-height:85vh;overflow:auto;">
+  <div style="font-weight:700;font-size:16px;margin-bottom:6px;">${lista.length===1?'Usuario creado':'Usuarios creados ('+lista.length+')'}</div>
+  <div style="font-size:12px;color:#666;margin-bottom:12px;">Envíale estos datos al instructor. Al primer ingreso, la plataforma le pedirá cambiar la contraseña.</div>
+  <pre id="cred-txt" style="white-space:pre-wrap;background:#f3f6f9;border-radius:8px;padding:12px;font-size:13px;font-family:inherit;margin:0 0 14px;">${txt.replace(/</g,'&lt;')}</pre>
+  <div style="display:flex;gap:8px;">
+   <button type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('cred-txt').textContent).then(()=>{this.textContent='¡Copiado!'})" style="flex:1;padding:10px;border:none;border-radius:8px;background:#1565c0;color:#fff;font-weight:600;cursor:pointer;">Copiar</button>
+   <button type="button" onclick="document.getElementById('modal-credenciales').remove()" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;">Cerrar</button>
+  </div></div>`;
+}
+
 // DESCARGA PLANTILLA EXCEL 
 function descargarPlantilla(){
  const wb = XLSX.utils.book_new();
 
  // Hoja 1 — Plantilla con solo un ejemplo
  const datos = [
- ['nombre','usuario','contraseña','cargo','es_admin'],
- ['Ana María Barrios Orozco','abarriosoro','Sena2026*','instructor','no']
+ ['nombre','cargo','es_admin'],
+ ['Ana María Barrios Orozco','instructor','no']
  ];
  const ws = XLSX.utils.aoa_to_sheet(datos);
- ws['!cols'] = [{wch:40},{wch:22},{wch:18},{wch:30},{wch:14}];
+ ws['!cols'] = [{wch:40},{wch:30},{wch:14}];
 
  // Estilo encabezado (fondo azul)
- ['A1','B1','C1','D1','E1'].forEach(ref=>{
+ ['A1','B1','C1'].forEach(ref=>{
  if(!ws[ref]) return;
  ws[ref].s = {
  fill:{fgColor:{rgb:'1565C0'}},
@@ -3462,15 +3507,15 @@ function descargarPlantilla(){
  [''],
  ['Columna','Descripción','Valores aceptados'],
  ['nombre','Nombre completo del usuario','Ej: Juan Carlos Pérez Gómez'],
- ['usuario','Nombre de usuario para ingresar','Ej: jperezgom (sin espacios ni tildes)'],
- ['contraseña','Contraseña inicial','Mínimo 4 caracteres. Ej: Sena2026*'],
+
  ['cargo','Rol del usuario','instructor / coord-acad / coord-form / bienestar / subdirector'],
  ['es_admin','¿Tiene acceso al panel admin?','si / no'],
  [''],
  [' IMPORTANTE:'],
  ['- No elimines la fila de encabezados (fila 1)'],
- ['- El usuario no debe tener espacios ni caracteres especiales'],
- ['- Cada usuario debe tener un nombre de usuario único'],
+ ['- Solo escribe el nombre completo: el usuario se crea solo (ej: Juan Carlos Pérez Gómez → jperezgom)'],
+ ['- La contraseña inicial de todos es Sena2026* y la cambian en su primer ingreso'],
+ ['- Si el nombre ya existe en la plataforma, solo se actualizan su cargo y si es administrador'],
  ['- Puedes agregar tantas filas como necesites debajo del ejemplo'],
  ];
  const ws2 = XLSX.utils.aoa_to_sheet(inst);
@@ -3489,7 +3534,7 @@ function procesarExcelUsuarios(input){
  const file = input.files[0];
  if(!file) return;
  const reader = new FileReader();
- reader.onload = function(e){
+ reader.onload = async function(e){
  try{
  const wb = XLSX.read(e.target.result, {type:'array'});
  const ws = wb.Sheets[wb.SheetNames[0]];
@@ -3505,21 +3550,26 @@ function procesarExcelUsuarios(input){
  const headers = rows[headerRow].map(h=>String(h).toLowerCase().trim()
  .replace('nombre completo','nombre').replace('contraseña','contrasena').replace('es admin (si/no)','es_admin'));
  usuariosPendientes = [];
+ const existentes = await usuariosExistentes();
+ const ocupados = new Set(existentes.map(u => u.usuario));
+ const porNombre = {}; existentes.forEach(u => porNombre[normNombreUsuario(u.nombre)] = u);
  for(let i=headerRow+1;i<rows.length;i++){
  const row = rows[i];
  if(!row[0]) continue;
  const obj = {};
  headers.forEach((h,j)=>{ obj[h]=String(row[j]||'').trim(); });
- if(obj.nombre && obj.usuario){
- usuariosPendientes.push({
- nombre: obj.nombre,
- usuario: obj.usuario,
- password_hash: obj.contrasena||'Sena2026*',
- cargo: obj.cargo||'instructor',
- es_admin: (obj.es_admin||'').toLowerCase()==='si',
- activo: true,
- debe_cambiar_password: true
- });
+ const nombre = String(obj.nombre||'').replace(/\s+/g,' ').trim();
+ if(!nombre) continue;
+ const cargo = obj.cargo||'instructor', es_admin = (obj.es_admin||'').toLowerCase()==='si';
+ const ya = porNombre[normNombreUsuario(nombre)];
+ if(ya){
+  // Ya está registrado: se conserva su usuario y su contraseña
+  usuariosPendientes.push({ _existe: ya.id, nombre, usuario: ya.usuario, cargo, es_admin });
+ } else {
+  const base = generarUsuarioBase(nombre); if(!base) continue;
+  const usuario = usuarioLibre(base, ocupados); ocupados.add(usuario);
+  porNombre[normNombreUsuario(nombre)] = {id:null, nombre, usuario};
+  usuariosPendientes.push({ nombre, usuario, password_hash: CLAVE_POR_DEFECTO, cargo, es_admin, activo: true, debe_cambiar_password: true });
  }
  }
  mostrarPreviewCarga();
@@ -3539,7 +3589,7 @@ function mostrarPreviewCarga(){
  <td style="padding:5px 8px;border-bottom:1px solid #eee;">${u.usuario}</td>
  <td style="padding:5px 8px;border-bottom:1px solid #eee;">${u.cargo}</td>
  <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:center;">${u.es_admin?'Sí':'No'}</td>
- <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:center;"><span style="color:#2e7d32;font-size:11px;"> Listo</span></td>
+ <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:center;"><span style="color:${u._existe?'#8a6d00':'#2e7d32'};font-size:11px;">${u._existe?'Ya existe: se actualiza':'Nuevo'}</span></td>
  </tr>`).join('');
  document.getElementById('preview-carga').style.display='block';
 }
@@ -3553,23 +3603,24 @@ async function confirmarCargaMasiva(){
  if(!usuariosPendientes.length) return;
  const btn = event.target;
  btn.textContent='Importando...'; btn.disabled=true;
- let ok=0, errores=0;
+ let ok=0, errores=0; const creados = [];
  for(const u of usuariosPendientes){
  try{
- await sbFetch('usuarios', 'POST', u);
- ok++;
- } catch(e){
- // Si ya existe, actualizar
- try{
- await sbFetch(`usuarios?usuario=eq.${encodeURIComponent(u.usuario)}`, 'PATCH', u);
- ok++;
- } catch(e2){ errores++; }
+ if(u._existe){
+  await sbFetch(`usuarios?id=eq.${u._existe}`, 'PATCH', {cargo: u.cargo, es_admin: u.es_admin});
+ } else {
+  await sbFetch('usuarios', 'POST', u);
+  creados.push({nombre: u.nombre, usuario: u.usuario});
  }
+ ok++;
+ } catch(e){ errores++; }
  }
  btn.textContent=' Confirmar e importar'; btn.disabled=false;
  cancelarCarga();
+ _usrOcupados = null;
  await cargarUsuarios();
- alert(`Importación completada:\n ${ok} usuarios registrados\n${errores>0?' '+errores+' errores':''}`);
+ if(errores) alert(`Importación con ${errores} error(es). ${ok} registro(s) procesados.`);
+ if(creados.length) mostrarCredenciales(creados); else if(!errores) alert(`Importación completada: ${ok} usuario(s) actualizados.`);
 }
 
 // Nombre del instructor según su perfil: cada quien entra con su propia cuenta
@@ -3605,10 +3656,9 @@ function getFirmante(){
 }
 
 const COORDINADOR_ACAD_DEFECTO = 'Isabel Cristina Niño Camacho';
-const COORDINADORA_FORMACION = 'Cristina Patricia Navarro Corrales'; // firma fija de los llamados disciplinarios
 // Muestra en el paso 6 el coordinador que firma según el tipo de llamado
 function mostrarCoordinadorLlamado(){
- const disc = tipoLlamado === 'disciplinario';
+ const disc = false; // todos los llamados llevan la firma del Coordinador Académico
  const a = document.getElementById('cd-coord-acad'), f = document.getElementById('cd-coord-form');
  if(a) a.style.display = disc ? 'none' : '';
  if(f) f.style.display = disc ? '' : 'none';
@@ -3617,11 +3667,6 @@ function getCoordinadorLlamado(){ return (v('coordinadorLlamado') || COORDINADOR
 // Segunda firma del llamado: Coordinador Académico (no se repite si quien reporta es ese mismo coordinador)
 function firmaCoordinadorLlamado(){
  const q = document.getElementById('quienReporta')?.value;
- if(tipoLlamado === 'disciplinario'){
-  // Disciplinarios: firma fija de la Coordinadora de Formación Profesional
-  if(q === 'coord-form' && normNombre(v('nombreReporta')||'') === normNombre(COORDINADORA_FORMACION)) return null;
-  return { nombre: COORDINADORA_FORMACION, cargo: 'Coordinadora de Formación Profesional\nCENTRO NACIONAL COLOMBO ALEMÁN' };
- }
  const n = getCoordinadorLlamado();
  if(q === 'coord-acad' && normNombre(v('nombreReporta')||'') === normNombre(n)) return null;
  return { nombre: n, cargo: 'Coordinador Académico – Metalmecánica\nCENTRO NACIONAL COLOMBO ALEMÁN' };
@@ -4635,7 +4680,9 @@ async function sbFetch(path, method='GET', body=null){
  if(body) opts.body = JSON.stringify(body);
  const r = await fetch(SB_URL+'/rest/v1/'+path, opts);
  if(!r.ok) throw new Error(await r.text());
- return r.status===204 ? null : r.json();
+ // Supabase responde 201 sin contenido al crear registros: no se intenta leer JSON vacío
+ const txt = await r.text();
+ return txt ? JSON.parse(txt) : null;
 }
 
 // Estado de sesión 
@@ -4813,31 +4860,37 @@ async function cargarHistorial(){
 }
 
 async function guardarUsuario(){
+ // Solo se escribe el nombre: el usuario se genera solo y la contraseña inicial es Sena2026*
  const id = document.getElementById('form-usuario-id').value;
- const nombre= document.getElementById('form-nombre').value.trim();
- const usuario=document.getElementById('form-usuario').value.trim();
- const pwd = document.getElementById('form-password').value.trim();
+ const nombre = document.getElementById('form-nombre').value.replace(/\s+/g,' ').trim();
  const cargo = document.getElementById('form-cargo').value;
  const admin = document.getElementById('form-admin').checked;
- if(!nombre||!usuario||(!id&&!pwd)){ alert('Completa todos los campos.'); return; }
- const datos = {nombre, usuario, cargo, es_admin:admin, activo:true};
- if(pwd){ datos.password_hash = pwd; datos.debe_cambiar_password = true; }
+ if(!nombre){ alert('Escribe el nombre completo.'); document.getElementById('form-nombre').focus(); return; }
+ if(nombre.split(' ').length < 2){ alert('Escribe el nombre completo con apellidos para poder crear el usuario.'); return; }
  try{
- if(id){
- await sbFetch(`usuarios?id=eq.${id}`, 'PATCH', datos);
- } else {
- datos.password_hash = pwd;
- await sbFetch('usuarios', 'POST', datos);
- }
- document.getElementById('form-usuario-id').value='';
- document.getElementById('form-nombre').value='';
- document.getElementById('form-usuario').value='';
- document.getElementById('form-password').value='';
- document.getElementById('form-cargo').value='instructor';
- document.getElementById('form-admin').checked=false;
- document.getElementById('form-titulo').textContent='Nuevo usuario';
- await cargarUsuarios();
- alert(id?'Usuario actualizado.':'Usuario creado correctamente.');
+  const existentes = await usuariosExistentes();
+  if(id){
+   // Al editar se conserva el usuario y la contraseña actuales
+   await sbFetch(`usuarios?id=eq.${id}`, 'PATCH', {nombre, cargo, es_admin: admin});
+  } else {
+   const repetido = existentes.find(u => normNombreUsuario(u.nombre) === normNombreUsuario(nombre));
+   if(repetido){ alert(`${nombre} ya está registrado con el usuario "${repetido.usuario}".`); return; }
+   const base = generarUsuarioBase(nombre);
+   if(!base){ alert('No se pudo generar el usuario con ese nombre.'); return; }
+   const usuario = usuarioLibre(base, new Set(existentes.map(u => u.usuario)));
+   await sbFetch('usuarios', 'POST', {nombre, usuario, cargo, es_admin: admin, activo: true, password_hash: CLAVE_POR_DEFECTO, debe_cambiar_password: true});
+   _usrOcupados = null;
+   mostrarCredenciales([{nombre, usuario}]);
+  }
+  document.getElementById('form-usuario-id').value='';
+  document.getElementById('form-nombre').value='';
+  document.getElementById('form-usuario').value='';
+  document.getElementById('form-cargo').value='instructor';
+  document.getElementById('form-admin').checked=false;
+  document.getElementById('form-titulo').textContent='Nuevo usuario';
+  const pi = document.getElementById('form-password-info'); if(pi) pi.textContent = CLAVE_POR_DEFECTO;
+  await cargarUsuarios();
+  if(id) alert('Usuario actualizado.');
  } catch(e){ alert('Error: '+e.message); }
 }
 
@@ -4849,7 +4902,7 @@ function editarUsuario(id,nombre,usuario,cargo,esAdmin){
  document.getElementById('form-cargo').value=cargo;
  document.getElementById('form-admin').checked=esAdmin==='true';
  document.getElementById('form-titulo').textContent='Editar usuario';
- document.getElementById('form-password').placeholder='Dejar vacío para no cambiar';
+ const pi = document.getElementById('form-password-info'); if(pi) pi.textContent = 'Se conserva (usa "Restablecer" si la olvidó)';
 }
 
 async function toggleActivo(id, activo){
