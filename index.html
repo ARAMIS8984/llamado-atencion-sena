@@ -877,6 +877,16 @@ window.addEventListener('load', ()=>{
  </select>
  </div>
 
+ <div class="field full" id="cd-coord-acad">
+ <label>Coordinador académico (firma)</label>
+ <input type="text" id="coordinadorLlamado" value="Isabel Cristina Niño Camacho" placeholder="Nombre del coordinador académico">
+ </div>
+ <div class="field full" id="cd-coord-form" style="display:none;">
+ <label>Firma de la Coordinadora de Formación Profesional</label>
+ <div style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#f3faf1;font-weight:600;">CRISTINA PATRICIA NAVARRO CORRALES</div>
+ <div style="font-size:11px;color:var(--muted);margin-top:4px;">Va fija en todos los llamados de atención disciplinarios.</div>
+ </div>
+
  <div class="field full" id="cd-instructores-fijo" style="display:none;">
  <label>Nombre del instructor</label>
  <div class="instructor-combo">
@@ -1830,6 +1840,7 @@ function mostrarCampos(){
  // "¿Quién reporta?": por defecto el instructor del perfil; se cambia solo si reporta el equipo u otra persona
  selectorWrap.style.display = 'block';
  if(!qr.value && nombrePerfil()) qr.value = 'instructor';
+ mostrarCoordinadorLlamado();
  actualizarQuienReporta();
 
  // Validación paso 7: si es instructor no necesita validar quienReporta
@@ -1918,6 +1929,8 @@ function validateStep(n){
  if(n===6){
   const q = document.getElementById('quienReporta');
   if(!q || !q.value){ alert('Selecciona quién reporta.'); q&&q.focus(); return false; }
+  const co = document.getElementById('coordinadorLlamado');
+  if(co && tipoLlamado !== 'disciplinario' && !co.value.trim()){ alert('Escribe el nombre del coordinador académico que firma el llamado.'); co.focus(); return false; }
   if(q.value==='instructor' && !(document.getElementById('instructores').value||'').trim()){ alert('Escribe o selecciona el nombre del instructor que reporta.'); document.getElementById('instructores').focus(); return false; }
  }
  const checks={1:[['nombreAprendiz','Nombre del aprendiz'],['documento','Número de documento'],['fecha','Fecha de reporte']],2:[['programa','Programa de formación'],['ficha','Número de ficha']],6:[],7:[['quienReporta','¿Quién reporta?']]};
@@ -2236,6 +2249,21 @@ function generarPDF(){
  // SECCIÓN 3 — Medidas formativas
  const tituloLlamado = (numeroLlamado==='primero'?'Primer':'Segundo') + ' Llamado de Atención ' + (tipoLlamado==='disciplinario'?'Disciplinario':'Académico');
 
+ // Dos firmas lado a lado: quien reporta (izquierda) y el Coordinador Académico (derecha)
+ const dibujarFirmas = (yBase, conLinea) => {
+  const colW = (cw - 12) / 2;
+  const bloques = [{ nombre: getFirmante(), cargo: getCargoFirmante() }];
+  const co = firmaCoordinadorLlamado(); if(co) bloques.push(co);
+  bloques.forEach((bq, i) => {
+   const x = ml + i*(colW + 12);
+   let yy = yBase;
+   if(conLinea){ doc.setDrawColor(...BLACK); doc.setLineWidth(0.4); doc.line(x, yy, x + colW, yy); yy += 5; }
+   doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...BLACK);
+   doc.splitTextToSize(String(bq.nombre||'').toUpperCase(), colW).forEach(l => { doc.text(l, x, yy); yy += 5; });
+   doc.setFont('helvetica','normal');
+   bq.cargo.split('\n').forEach(l => { doc.splitTextToSize(l, colW).forEach(ll => { doc.text(ll, x, yy); yy += 5; }); });
+  });
+ };
  if(!esSegundo){
  // PRIMER LLAMADO: la sección 3 continúa justo después de la sección 2.
  // La firma va anclada al pie de la última página; si el párrafo no cabe completo
@@ -2243,7 +2271,7 @@ function generarPDF(){
  // La firma va SIEMPRE 70 mm debajo del último párrafo. Si no cabe, pasan a la página
  // siguiente las últimas líneas del párrafo junto con la firma.
  const SEP_FIRMA = 70, LIMITE_FIRMA = PAGE_H - 10;
- const BLOQUE_FIRMA = SEP_FIRMA + 5*getCargoFirmante().split('\n').length + 2;
+ const BLOQUE_FIRMA = SEP_FIRMA + 5 + 5*getCargoFirmante().split('\n').length + 2;
  const segS3 = [
  {t:'La presente comunicación corresponde a un '},
  {t:tituloLlamado, b:true},
@@ -2269,11 +2297,7 @@ function generarPDF(){
 
  // Pie primer llamado — firma 70 mm debajo de la última línea del párrafo
  let yFirma = (y - LINEA) + SEP_FIRMA;
- doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...BLACK);
- doc.text(getFirmante().toUpperCase(), ml, yFirma);
- doc.setFont('helvetica','normal');
- let yFirmaP1 = yFirma + 5;
- getCargoFirmante().split('\n').forEach(linea=>{ doc.text(linea, ml, yFirmaP1); yFirmaP1+=5; });
+ dibujarFirmas(yFirma, false);
 
  } else {
  // SEGUNDO LLAMADO 
@@ -2282,7 +2306,7 @@ function generarPDF(){
  const PARRAFO_S3_ESTIMADO = 70;
  const FIRMA_S3_H = 22;
  const SEP_FIRMA2 = 70, LINEA2 = 5.5, LIMITE_FIRMA2 = PAGE_H - 10;
- const BLOQUE_FIRMA2 = SEP_FIRMA2 + 5 + 5*getCargoFirmante().split('\n').length + 2;
+ const BLOQUE_FIRMA2 = SEP_FIRMA2 + 10 + 5*getCargoFirmante().split('\n').length + 2;
  // Escribe el último párrafo dejando espacio para la firma; si no cabe, sus últimas líneas pasan con la firma
  const parrafoFinal = (segs, sy) => {
   const n = armarLineasMixed(segs).length, MIN = 3;
@@ -2387,17 +2411,8 @@ function generarPDF(){
  }
 
  // Firma: línea a 70 mm debajo de la última línea del último párrafo
- const firmaW = 75;
  let FIRMA_Y_BASE = (y - LINEA2) + SEP_FIRMA2;
- doc.setDrawColor(...BLACK);
- doc.setLineWidth(0.4);
- doc.line(ml, FIRMA_Y_BASE, ml+firmaW, FIRMA_Y_BASE);
- let yFirmaS = FIRMA_Y_BASE + 5;
- doc.setFont('helvetica','bold'); doc.setFontSize(10);
- doc.text(getFirmante().toUpperCase(), ml, yFirmaS); yFirmaS+=5;
- doc.setFont('helvetica','normal');
- const cargoLineas = getCargoFirmante().split('\n');
- cargoLineas.forEach(linea=>{ doc.text(linea, ml, yFirmaS); yFirmaS+=5; });
+ dibujarFirmas(FIRMA_Y_BASE, true);
  }
 
  // Metadatos de autoría
@@ -2478,6 +2493,7 @@ function volverInicio(){
  document.getElementById('programa').value='';
  document.getElementById('instructores').value='';
  const qrR = document.getElementById('quienReporta'); if(qrR) qrR.value='';
+ const coR = document.getElementById('coordinadorLlamado'); if(coR) coR.value = COORDINADOR_ACAD_DEFECTO;
  const nrR = document.getElementById('nombreReporta'); if(nrR) nrR.value='';
  bloquesMeses=[];
  const bm = document.getElementById('bloques-meses');
@@ -2577,15 +2593,16 @@ function buildPreviewHTML(){
  <hr style="border:none;border-top:1px solid #ccc;margin:18px 0;">
  <p style="text-align:justify;margin-bottom:10px;"><strong>Se informa que el incumplimiento de las recomendaciones aquí establecidas o la persistencia de las conductas que dieron origen al presente llamado de atención dará lugar a la aplicación de la siguiente medida formativa, consistente en la formulación y ejecución de un Plan de Mejoramiento ${tipoLlamado==='disciplinario'?'Disciplinario':'Académico'}, conforme a lo dispuesto en el Acuerdo 0009 de 2024 del Reglamento del Aprendiz SENA.</strong></p>
  <p style="text-align:justify;margin-bottom:24px;"><strong>Como evidencia del conocimiento y aceptación de las recomendaciones antes descritas, el aprendiz deberá firmar un Acta de Compromiso ${tipoLlamado==='disciplinario'?'Disciplinario':'Académico'}, comprometiéndose a cumplir las acciones de mejora establecidas para corregir las situaciones evidenciadas.</strong></p>
- <div style="margin-top:16px;">
- <div style="display:inline-block;border-top:2px solid #333;padding-top:6px;min-width:200px;"><strong>${getFirmante().toUpperCase()}</strong><br>${getCargoFirmante().replace('\n','<br>')}</div>
+ <div style="margin-top:16px;display:flex;gap:24px;flex-wrap:wrap;">
+ <div style="flex:1;min-width:180px;border-top:2px solid #333;padding-top:6px;"><strong>${getFirmante().toUpperCase()}</strong><br>${getCargoFirmante().replace('\n','<br>')}</div>
+ ${firmaCoordinadorLlamado() ? `<div style="flex:1;min-width:180px;border-top:2px solid #333;padding-top:6px;"><strong>${firmaCoordinadorLlamado().nombre.toUpperCase()}</strong><br>${firmaCoordinadorLlamado().cargo.replace('\n','<br>')}</div>` : ''}
  </div>`
  : `<p style="text-align:justify;">La presente comunicación corresponde a un <strong>${tituloLlamado}</strong>, de conformidad con lo establecido en el <strong>Capítulo VIII, Artículo 46, numeral 2, del Acuerdo 0009 de 2024 del Reglamento del Aprendiz SENA</strong>, el cual <strong>contempla esta medida formativa de carácter preventivo</strong>, orientada a promover el cumplimiento de los deberes del aprendiz, fortalecer su permanencia en el proceso formativo y prevenir situaciones que puedan afectar su formación integral. En este sentido, se espera que asuma los compromisos necesarios para mejorar su comportamiento y garantizar el cumplimiento de los deberes establecidos en el Reglamento del Aprendiz SENA. <strong>De persistir los incumplimientos aquí descritos o de presentarse nuevamente conductas similares, se procederá a aplicar la siguiente medida formativa, correspondiente al Segundo Llamado de Atención ${tipoLlamado==='disciplinario'?'Disciplinario':'Académico'}</strong>, conforme a lo dispuesto en el Artículo 46 del Acuerdo 0009 de 2024.</p>`;
 
  const pieFirmante = esSegundo ? '' : `
- <div style="margin-top:24px;">
- <div style="font-weight:700;font-size:11pt;">${getFirmante().toUpperCase()}</div>
- <div>${getCargoFirmante().replace('\n','<br>')}</div>
+ <div style="margin-top:24px;display:flex;gap:24px;flex-wrap:wrap;">
+ <div style="flex:1;min-width:180px;"><div style="font-weight:700;font-size:11pt;">${getFirmante().toUpperCase()}</div><div>${getCargoFirmante().replace('\n','<br>')}</div></div>
+ ${firmaCoordinadorLlamado() ? `<div style="flex:1;min-width:180px;"><div style="font-weight:700;font-size:11pt;">${firmaCoordinadorLlamado().nombre.toUpperCase()}</div><div>${firmaCoordinadorLlamado().cargo.replace('\n','<br>')}</div></div>` : ''}
  </div>`;
 
  return `
@@ -3587,6 +3604,28 @@ function getFirmante(){
  return v('nombreReporta') || '';
 }
 
+const COORDINADOR_ACAD_DEFECTO = 'Isabel Cristina Niño Camacho';
+const COORDINADORA_FORMACION = 'Cristina Patricia Navarro Corrales'; // firma fija de los llamados disciplinarios
+// Muestra en el paso 6 el coordinador que firma según el tipo de llamado
+function mostrarCoordinadorLlamado(){
+ const disc = tipoLlamado === 'disciplinario';
+ const a = document.getElementById('cd-coord-acad'), f = document.getElementById('cd-coord-form');
+ if(a) a.style.display = disc ? 'none' : '';
+ if(f) f.style.display = disc ? '' : 'none';
+}
+function getCoordinadorLlamado(){ return (v('coordinadorLlamado') || COORDINADOR_ACAD_DEFECTO).trim(); }
+// Segunda firma del llamado: Coordinador Académico (no se repite si quien reporta es ese mismo coordinador)
+function firmaCoordinadorLlamado(){
+ const q = document.getElementById('quienReporta')?.value;
+ if(tipoLlamado === 'disciplinario'){
+  // Disciplinarios: firma fija de la Coordinadora de Formación Profesional
+  if(q === 'coord-form' && normNombre(v('nombreReporta')||'') === normNombre(COORDINADORA_FORMACION)) return null;
+  return { nombre: COORDINADORA_FORMACION, cargo: 'Coordinadora de Formación Profesional\nCENTRO NACIONAL COLOMBO ALEMÁN' };
+ }
+ const n = getCoordinadorLlamado();
+ if(q === 'coord-acad' && normNombre(v('nombreReporta')||'') === normNombre(n)) return null;
+ return { nombre: n, cargo: 'Coordinador Académico – Metalmecánica\nCENTRO NACIONAL COLOMBO ALEMÁN' };
+}
 function getCargoFirmante(){
  const val = document.getElementById('quienReporta')?.value || 'instructor';
  if(val === 'instructor') return (rolInstructorDisc(v('instructores')) === 'instructora' ? 'Instructora' : 'Instructor') + ' – Metalmecánica\nCENTRO NACIONAL COLOMBO ALEMÁN';
