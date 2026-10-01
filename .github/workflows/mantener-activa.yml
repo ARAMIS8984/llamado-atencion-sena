@@ -1,1 +1,23 @@
+# Mantiene activa la base de datos de Supabase aunque nadie use la plataforma
+# (por ejemplo en vacaciones). Supabase pausa los proyectos gratuitos tras 7 días sin uso.
+# Se ejecuta solo cada 2 días y también se puede lanzar a mano desde la pestaña Actions.
+name: Mantener activa la plataforma
 
+on:
+  schedule:
+    - cron: '0 13 */2 * *'   # cada 2 días a las 8:00 a. m. hora de Colombia
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Registrar actividad en Supabase
+        env:
+          SB_URL: https://jepkhqlbiovrzveagvjx.supabase.co
+          SB_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImplcGtocWxiaW92cnp2ZWFndmp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1MTE1NzUsImV4cCI6MjEwNjA4NzU3NX0.ji_b7Z-RVl9CqBKLZC0aTiL80eCer2bB0q0Cb4MGQcI
+        run: |
+          curl -sS -f --retry 3 --retry-delay 20 -X POST "$SB_URL/rest/v1/ping_log" \
+            -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY" \
+            -H "Content-Type: application/json" -H "Prefer: return=minimal" \
+            -d '{}' -w "Respuesta de Supabase: %{http_code}\n"
