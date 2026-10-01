@@ -5270,18 +5270,22 @@ aplicarVista();
      Tablas Supabase: fichas, aprendices, instructor_fichas, lideres_programa
      ═══════════════════════════════════════════════════════════════ -->
 <style>
-.fx-vista{display:none;position:fixed;inset:0;z-index:9500;background:#f5f6fa;overflow-y:auto;-webkit-overflow-scrolling:touch;font-family:'DM Sans',sans-serif;color:#1a1f1a;}
+.fx-vista{display:none;position:fixed;inset:0;z-index:9500;background:linear-gradient(135deg,#6a0dad 0%,#2d6cdf 40%,#00bcd4 100%);overflow-y:auto;-webkit-overflow-scrolling:touch;font-family:'DM Sans',sans-serif;color:#1a1f1a;}
 .fx-vista.abierta{display:block;}
-.fx-top{position:sticky;top:0;z-index:5;background:var(--green,#15851E);color:#fff;padding:12px 14px;display:flex;align-items:center;gap:12px;}
+.fx-top{position:sticky;top:0;z-index:5;background:rgba(0,0,0,.25);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,.15);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;}
+.fx-top img{width:44px;height:44px;object-fit:contain;flex:0 0 auto;}
+.fx-titulo,.fx-sub{text-shadow:0 1px 4px rgba(0,0,0,.4);}
+.fx-volver{display:inline-block;margin:14px 0 0;background:#fff;color:#44503f;border:none;border-radius:10px;padding:9px 16px;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.12);}
 .fx-top button{white-space:nowrap;flex:0 0 auto;background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit;}
-.fx-titulo{font-weight:700;font-size:15px;line-height:1.2;}
+.fx-titulo{font-weight:700;font-size:17px;line-height:1.2;}
 .fx-sub{font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .fx-top>div{min-width:0;}
-.fx-tabs{display:flex;gap:6px;padding:10px 14px 0;max-width:720px;margin:0 auto;overflow-x:auto;}
-.fx-tab{flex:0 0 auto;border:1px solid #d6ded4;background:#fff;color:#44503f;border-radius:20px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
-.fx-tab.on{background:var(--green,#15851E);border-color:var(--green,#15851E);color:#fff;}
+.fx-tabs{display:flex;gap:6px;padding:12px 14px 0;max-width:720px;margin:0 auto;overflow-x:auto;}
+.fx-nav{max-width:720px;margin:0 auto;padding:0 14px;}
+.fx-tab{flex:0 0 auto;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.16);color:#fff;border-radius:20px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.fx-tab.on{background:#fff;border-color:#fff;color:var(--green-mid,#27500A);box-shadow:0 2px 8px rgba(0,0,0,.12);}
 .fx-body{padding:14px;max-width:720px;margin:0 auto;padding-bottom:90px;}
-.fx-card{background:#fff;border:1px solid #e2e8e0;border-radius:12px;padding:14px;margin-bottom:12px;}
+.fx-card{background:#fff;border:1px solid #e2e8e0;border-radius:14px;padding:14px;margin-bottom:12px;}
 .fx-card h3{font-size:15px;margin:0 0 4px;}
 .fx-muted{font-size:12px;color:#6b7a6b;line-height:1.5;}
 .fx-btn{border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
@@ -5290,10 +5294,13 @@ aplicarVista();
 .fx-btn-d{background:#fff;color:#c0392b;border:1px solid #efc0ba;}
 .fx-btn-sm{padding:6px 10px;font-size:12px;}
 .fx-btn:disabled{opacity:.55;cursor:default;}
-.fx-grupo{font-size:12px;font-weight:700;color:#27500A;text-transform:uppercase;letter-spacing:.03em;margin:18px 2px 8px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
-.fx-ficha{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8e0;border-radius:10px;padding:11px 12px;margin-bottom:8px;}
+.fx-grupo{font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.35);text-transform:uppercase;letter-spacing:.03em;margin:18px 2px 8px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.fx-ficha{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8e0;border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+.fx-hoja .fx-grupo{color:#27500A;text-shadow:none;}
+.fx-sobre{font-size:13px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.35);line-height:1.5;}
+.fx-pie{position:sticky;bottom:0;background:#fff;border-radius:14px 14px 0 0;padding:12px 14px 14px;margin:8px -14px 0;box-shadow:0 -4px 16px rgba(0,0,0,.15);}
 .fx-ficha-num{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;}
-.fx-ficha-info{flex:1;min-width:0;}
+.fx-ficha-info{flex:1 1 170px;min-width:0;}
 .fx-ficha-acc{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
 .fx-pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;background:#EAF3DE;color:#27500A;font-weight:600;}
 .fx-pill-g{background:#eef0f3;color:#555;}
@@ -5321,9 +5328,10 @@ aplicarVista();
 
 <div id="fx-vista" class="fx-vista">
  <div class="fx-top">
-  <button type="button" onclick="fxCerrar()">← Volver</button>
-  <div><div class="fx-titulo" id="fx-titulo-txt">Registro de asistencia</div><div class="fx-sub" id="fx-sub"></div></div>
+  <img id="fx-logo" alt="SENA">
+  <div style="min-width:0;"><div class="fx-titulo" id="fx-titulo-txt">Registro de asistencia</div><div class="fx-sub" id="fx-sub"></div></div>
  </div>
+ <div class="fx-nav"><button type="button" class="fx-volver" onclick="fxCerrar()">← Volver al inicio</button></div>
  <div class="fx-tabs" id="fx-tabs"></div>
  <div class="fx-body" id="fx-body"></div>
 </div>
@@ -5436,7 +5444,7 @@ function fxPintarBotonAdmin(){
  m.className = 'adm-opt';
  m.onclick = () => fxAbrir(FX.nAlertas ? 'alertas' : 'mias');
  m.style.cssText = b.style.cssText;
- m.innerHTML = `<span style="font-size:24px;"></span><div style="flex:1;"><div style="font-size:15px;font-weight:600;color:#1a1a1a;">Registro de asistencia</div><div style="font-size:12px;color:#666;">Mis fichas, toma de asistencia y alertas</div></div><span style="color:#1565c0;font-size:18px;">›</span>`;
+ m.innerHTML = `<span style="font-size:24px;"></span><div style="flex:1;"><div id="fx-adm-asis-tit" style="font-size:15px;font-weight:600;color:#1a1a1a;">Registro de asistencia</div><div style="font-size:12px;color:#666;">Mis fichas, toma de asistencia y alertas</div></div><span style="color:#1565c0;font-size:18px;">›</span>`;
  ref.parentNode.insertBefore(m, b);
 }
 
@@ -5451,6 +5459,7 @@ function fxTabs(){
 function fxAbrir(tab){
  if(!sesionActual) return;
  if(!FX.programas.length) FX.programas = fxProgramas();
+ const lg = document.getElementById('fx-logo'); if(lg && !lg.src && typeof LOGO_B64!=='undefined') lg.src = 'data:image/jpeg;base64,'+LOGO_B64;
  document.getElementById('fx-vista').classList.add('abierta');
  document.body.style.overflow = 'hidden';
  const sub = fxEsAdmin() ? 'Administrador' : (fxEsLider() ? 'Líder de: '+FX.lider.join(' · ') : (sesionActual.nombre||''));
@@ -5469,7 +5478,7 @@ function fxIrTab(tab){
  if(tab!=='cargar') FX.cargaPend = FX.cargaPend.filter(it => it.estado==='listo');
  document.getElementById('fx-tabs').innerHTML = tabs.map(([k,l]) => `<button type="button" class="fx-tab ${k===tab?'on':''}" onclick="fxIrTab('${k}')">${l}</button>`).join('');
  const body = document.getElementById('fx-body');
- body.innerHTML = '<div class="fx-muted" style="padding:20px;text-align:center;">Cargando...</div>';
+ body.innerHTML = '<div class="fx-sobre" style="padding:20px;text-align:center;">Cargando...</div>';
  const titulos = {mias:'Registro de asistencia', alertas:'Registro de asistencia', cargar:'Fichas del programa', lideres:'Líderes y fichas'};
  document.getElementById('fx-titulo-txt').textContent = titulos[tab] || 'Registro de asistencia';
  if(tab==='mias') fxRenderMias();
@@ -5490,8 +5499,9 @@ async function fxTraerFichas(filtroProgramas){
  return r||[];
 }
 async function fxTraerMias(){
- const r = await fxReq(`instructor_fichas?usuario_id=eq.${sesionActual.id}&select=ficha_id`);
+ const r = await fxReq(`instructor_fichas?usuario_id=eq.${sesionActual.id}&select=ficha_id,competencia,resultados`);
  FX.misFichas = new Set((r||[]).map(x => x.ficha_id));
+ FX.misAsoc = {}; (r||[]).forEach(x => FX.misAsoc[x.ficha_id] = {competencia: x.competencia||'', resultados: x.resultados||[]});
  return FX.misFichas;
 }
 function fxAgrupar(fichas){
@@ -5515,11 +5525,13 @@ async function fxRenderMias(){
    return;
   }
   body.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px;">
-    <div class="fx-muted">${mias.length} ficha${mias.length!==1?'s':''} asociada${mias.length!==1?'s':''} a tu perfil</div>
+    <div class="fx-sobre">${mias.length} ficha${mias.length!==1?'s':''} asociada${mias.length!==1?'s':''} a tu perfil</div>
     <button type="button" class="fx-btn fx-btn-p fx-btn-sm" onclick="fxAbrirAsociar()">+ Asociar fichas</button></div>` +
    fxAgrupar(mias).map(([p, fs]) => `<div class="fx-grupo"><span>${fxEsc(p)}</span></div>` + fs.map(f => `
     <div class="fx-ficha"><div class="fx-ficha-info"><div class="fx-ficha-num">${fxEtiqueta(f)}</div>
-     <div class="fx-muted">${f.nApr} ${f.nApr!==1?'aprendices':'aprendiz'} en formación</div></div>
+     <div class="fx-muted">${f.nApr} ${f.nApr!==1?'aprendices':'aprendiz'} en formación</div>
+     ${(FX.misAsoc[f.id]||{}).competencia ? `<div style="font-size:12px;margin-top:6px;line-height:1.4;color:#27500A;"><b>Competencia:</b> ${fxEsc(FX.misAsoc[f.id].competencia)}<br><span class="fx-muted">${FX.misAsoc[f.id].resultados.length} resultado${FX.misAsoc[f.id].resultados.length!==1?'s':''} de aprendizaje · <a href="#" onclick="event.preventDefault();fxDefinirCompetencia('${f.id}','mias')" style="color:#1565c0;">Cambiar</a></span></div>`
+       : `<div class="fx-aviso" style="margin-top:6px;">Falta definir la competencia y los resultados que orientas. <a href="#" onclick="event.preventDefault();fxDefinirCompetencia('${f.id}','mias')" style="color:#1565c0;font-weight:600;">Definir ahora</a></div>`}</div>
      <div class="fx-ficha-acc"><button type="button" class="fx-btn fx-btn-p fx-btn-sm" onclick="fxTomarAsistencia('${f.id}')">Tomar asistencia</button>
      <button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="fxVerAprendices('${f.id}')">Aprendices</button>
      <button type="button" class="fx-btn fx-btn-d fx-btn-sm" onclick="fxDesasociar('${f.id}')">Quitar</button></div></div>`).join('')).join('');
@@ -5546,6 +5558,7 @@ async function fxAbrirAsociar(){
 }
 function fxElegirProgAsoc(i){ FX.asocProg = (i===null) ? null : FX.programas[i]; fxPintarAsociar(); document.getElementById('fx-hoja-cuerpo').scrollTop = 0; }
 function fxPintarAsociar(){
+ document.getElementById('fx-hoja-tit').innerHTML = '<b>Asociar fichas a mi perfil</b><div class="fx-muted" id="fx-asocsub">Elige el programa de formación</div>';
  const cuerpo = document.getElementById('fx-hoja-cuerpo');
  const sub = document.getElementById('fx-asocsub');
  // Paso 1: todos los programas de formación
@@ -5573,16 +5586,96 @@ function fxPintarAsociar(){
   }).join('') : '<div class="fx-aviso">Este programa todavía no tiene fichas cargadas. Las carga el líder del programa desde el Reporte de Juicios Evaluativos.</div>');
 }
 async function fxToggleAsociar(fid){
- const b = document.getElementById('fx-asoc-'+fid);
- if(b) b.disabled = true;
+ if(!FX.misFichas.has(fid)){ fxDefinirCompetencia(fid, 'asociar'); return; }
+ const f = fxTodasParaAsociar.find(x => x.id===fid) || FX.fichasCache[fid] || {};
+ if(!confirm(`¿Quitar la ficha ${f.numero||''}${f.grupo?' – '+f.grupo:''} de tu perfil?`)) return;
  try{
-  if(FX.misFichas.has(fid)){ await fxReq(`instructor_fichas?usuario_id=eq.${sesionActual.id}&ficha_id=eq.${fid}`,'DELETE'); FX.misFichas.delete(fid); }
-  else { await fxReq('instructor_fichas','POST',{usuario_id:sesionActual.id, ficha_id:fid},'resolution=ignore-duplicates,return=minimal'); FX.misFichas.add(fid); }
-  const f = fxTodasParaAsociar.find(x => x.id===fid);
-  if(f) f.nIns += FX.misFichas.has(fid) ? 1 : -1;
+  await fxReq(`instructor_fichas?usuario_id=eq.${sesionActual.id}&ficha_id=eq.${fid}`,'DELETE');
+  FX.misFichas.delete(fid);
+  if(f.nIns) f.nIns -= 1;
   fxPintarAsociar();
   FX.volverA = 'mias';
- }catch(e){ alert('No se pudo actualizar: '+e.message); if(b) b.disabled = false; }
+ }catch(e){ alert('No se pudo actualizar: '+e.message); }
+}
+
+// ── Competencia y resultados de aprendizaje que el instructor orienta en la ficha ──
+async function fxDefinirCompetencia(fid, origen){
+ FX.defComp = { fid, origen, comps: [], sel: null, res: new Set(), manual: false };
+ const f = FX.fichasCache[fid] || {};
+ const previo = (FX.misAsoc||{})[fid];
+ document.getElementById('fx-hoja-tit').innerHTML = `<b>Ficha ${fxEtiqueta(f)}</b><div class="fx-muted">Elige la competencia y los resultados de aprendizaje que orientas</div>`;
+ document.getElementById('fx-hoja-cuerpo').innerHTML = '<div class="fx-muted" style="padding:14px;text-align:center;">Cargando competencias...</div>';
+ document.getElementById('fx-hoja').classList.add('abierta');
+ try{
+  const r = await fxReq(`fichas?id=eq.${fid}&select=competencias`);
+  FX.defComp.comps = (r&&r[0]&&r[0].competencias) || [];
+  if(previo && previo.competencia){
+   const i = FX.defComp.comps.findIndex(c => c.competencia===previo.competencia);
+   if(i>=0){ FX.defComp.sel = i; FX.defComp.res = new Set(previo.resultados||[]); }
+   else { FX.defComp.manual = true; FX.defComp.compTxt = previo.competencia; FX.defComp.resTxt = (previo.resultados||[]).join('\n'); }
+  }
+  if(!FX.defComp.comps.length) FX.defComp.manual = true;
+  fxPintarCompetencia();
+ }catch(e){ document.getElementById('fx-hoja-cuerpo').innerHTML = `<div class="fx-aviso fx-err">${fxEsc(e.message)}</div>`; }
+}
+function fxPintarCompetencia(){
+ const D = FX.defComp;
+ const cuerpo = document.getElementById('fx-hoja-cuerpo');
+ const volver = D.origen==='asociar' ? `<button type="button" class="fx-btn fx-btn-s fx-btn-sm" style="margin-bottom:10px;" onclick="fxPintarAsociar()">← Fichas</button>` : '';
+ if(D.manual){
+  cuerpo.innerHTML = volver + (D.comps.length ? '' : `<div class="fx-aviso" style="margin:0 0 10px;">Esta ficha se cargó sin competencias. Escríbelas aquí o pídele al líder del programa que vuelva a subir el Reporte de Juicios.</div>`) + `
+   <label class="fx-muted">Competencia</label>
+   <textarea class="fx-input" id="fx-comp-txt" rows="3">${fxEsc(D.compTxt||'')}</textarea>
+   <label class="fx-muted" style="display:block;margin-top:10px;">Resultados de aprendizaje (uno por línea)</label>
+   <textarea class="fx-input" id="fx-res-txt" rows="5">${fxEsc(D.resTxt||'')}</textarea>
+   ${D.comps.length?`<button type="button" class="fx-btn fx-btn-s fx-btn-sm" style="margin-top:8px;" onclick="FX.defComp.manual=false;fxPintarCompetencia()">Elegir de la lista</button>`:''}
+   <button type="button" class="fx-btn fx-btn-p" style="width:100%;margin-top:14px;padding:12px;" onclick="fxGuardarCompetencia()">Guardar</button>`;
+  return;
+ }
+ cuerpo.innerHTML = volver + `<div class="fx-muted" style="margin-bottom:6px;"><b>1.</b> Competencia</div>` +
+  D.comps.map((c,i) => `<div class="fx-ficha" style="cursor:pointer;${D.sel===i?'border-color:var(--green,#15851E);background:#f3faf1;':''}" onclick="FX.defComp.sel=${i};FX.defComp.res=new Set();fxPintarCompetencia()">
+   <div class="fx-ficha-info" style="font-size:13px;">${fxEsc(c.competencia)}<div class="fx-muted">${c.resultados.length} resultado${c.resultados.length!==1?'s':''} de aprendizaje</div></div>
+   <span style="font-size:18px;color:var(--green,#15851E);">${D.sel===i?'●':'○'}</span></div>`).join('') +
+  (D.sel!==null ? `<div class="fx-muted" style="margin:14px 0 6px;"><b>2.</b> Resultados de aprendizaje <span style="opacity:.75">(uno o varios)</span></div>` +
+   D.comps[D.sel].resultados.map((r,j) => `<label class="fx-ficha" style="cursor:pointer;align-items:flex-start;${D.res.has(r)?'border-color:var(--green,#15851E);background:#f3faf1;':''}">
+    <input type="checkbox" ${D.res.has(r)?'checked':''} onchange="fxToggleRes(${j})" style="margin-top:3px;width:18px;height:18px;flex:0 0 auto;">
+    <span style="flex:1;font-size:13px;line-height:1.45;">${fxEsc(r)}</span></label>`).join('') : '') +
+  `<button type="button" class="fx-btn fx-btn-s fx-btn-sm" style="margin-top:8px;" onclick="FX.defComp.manual=true;fxPintarCompetencia()">No está en la lista: escribirla</button>
+   <button type="button" class="fx-btn fx-btn-p" style="width:100%;margin-top:14px;padding:12px;" onclick="fxGuardarCompetencia()" ${D.sel===null||!D.res.size?'disabled':''}>${D.origen==='asociar'?'Asociar ficha':'Guardar'}</button>`;
+}
+function fxToggleRes(j){
+ const D = FX.defComp, r = D.comps[D.sel].resultados[j];
+ if(D.res.has(r)) D.res.delete(r); else D.res.add(r);
+ const c = document.getElementById('fx-hoja-cuerpo'), y = c.scrollTop;
+ fxPintarCompetencia(); c.scrollTop = y;
+}
+async function fxGuardarCompetencia(){
+ const D = FX.defComp;
+ let competencia, resultados;
+ if(D.manual){
+  competencia = (document.getElementById('fx-comp-txt').value||'').replace(/\s+/g,' ').trim();
+  resultados = (document.getElementById('fx-res-txt').value||'').split('\n').map(x => x.replace(/\s+/g,' ').trim()).filter(Boolean);
+  D.compTxt = competencia; D.resTxt = resultados.join('\n');
+ } else if(D.sel!==null){
+  competencia = D.comps[D.sel].competencia;
+  resultados = D.comps[D.sel].resultados.filter(r => D.res.has(r));
+ }
+ if(!competencia){ alert('Indica la competencia.'); return; }
+ if(!resultados || !resultados.length){ alert('Indica al menos un resultado de aprendizaje.'); return; }
+ try{
+  if(FX.misFichas.has(D.fid)){
+   await fxReq(`instructor_fichas?usuario_id=eq.${sesionActual.id}&ficha_id=eq.${D.fid}`,'PATCH',{competencia, resultados});
+  } else {
+   await fxReq('instructor_fichas','POST',{usuario_id:sesionActual.id, ficha_id:D.fid, competencia, resultados},'resolution=merge-duplicates,return=minimal');
+   FX.misFichas.add(D.fid);
+   const f = fxTodasParaAsociar.find(x => x.id===D.fid); if(f) f.nIns += 1;
+  }
+  FX.misAsoc = FX.misAsoc || {}; FX.misAsoc[D.fid] = {competencia, resultados};
+  FX.volverA = 'mias';
+  if(D.origen==='asociar'){ fxPintarAsociar(); }
+  else if(D.origen==='asistencia'){ document.getElementById('fx-hoja').classList.remove('abierta'); FX.volverA = null; fxTomarAsistencia(D.fid); }
+  else fxCerrarHoja();
+ }catch(e){ alert('No se pudo guardar: '+e.message); }
 }
 
 // ── Aprendices de una ficha ──
@@ -5635,7 +5728,7 @@ async function fxRenderCargar(){
     <input type="file" accept=".xls,.xlsx" multiple style="display:none;" onchange="fxLeerArchivos(this)"></label>
    <div id="fx-pend"></div>
   </div>
-  <div id="fx-lista-prog"><div class="fx-muted" style="padding:14px;text-align:center;">Cargando fichas...</div></div>`;
+  <div id="fx-lista-prog"><div class="fx-sobre" style="padding:14px;text-align:center;">Cargando fichas...</div></div>`;
  fxPintarPendientes();
  try{
   await fxTraerMias();
@@ -5687,7 +5780,16 @@ function fxLeerReporte(data){
     nombres: String(row[2]||'').replace(/\s+/g,' ').trim(), apellidos: String(row[3]||'').replace(/\s+/g,' ').trim(), estado: 'EN FORMACION' };
   }
  }
- return { ficha, programa, datos, aprendices: Object.values(mapa) };
+ const comps = {};
+ for(let i=headerRow+1; i<rows.length; i++){
+  const row = rows[i];
+  const c = String(row[5]||'').replace(/\s+/g,' ').trim(), r = String(row[6]||'').replace(/\s+/g,' ').trim();
+  if(!c) continue;
+  (comps[c] = comps[c] || new Set());
+  if(r) comps[c].add(r);
+ }
+ const competencias = Object.keys(comps).map(c => ({ competencia: c, resultados: [...comps[c]] }));
+ return { ficha, programa, datos, competencias, aprendices: Object.values(mapa) };
 }
 function fxLeerArchivos(input){
  const files = [...(input.files||[])];
@@ -5733,7 +5835,7 @@ function fxPintarPendientes(){
   if(it.estado==='error') return `<div class="fx-aviso fx-err"><b>${fxEsc(it.archivo)}</b><br>${fxEsc(it.msg)}</div>`;
   return `<div class="fx-card" style="margin:10px 0 0;background:#fbfdfb;">
    <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
-    <div><div class="fx-ficha-num">Ficha ${fxEsc(it.ficha)}</div><div class="fx-muted">${it.aprendices.length} aprendices en formación · ${fxEsc(it.programa||'Programa no identificado')}</div></div>
+    <div><div class="fx-ficha-num">Ficha ${fxEsc(it.ficha)}</div><div class="fx-muted">${it.aprendices.length} aprendices en formación · ${(it.competencias||[]).length} competencias · ${fxEsc(it.programa||'Programa no identificado')}</div></div>
     <button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="FX.cargaPend.splice(${i},1);fxPintarPendientes()">Quitar</button></div>
    ${it.existe?`<div class="fx-aviso">Esta ficha ya está registrada. Al guardar: ${it.nuevos} ${it.nuevos!==1?'aprendices nuevos':'aprendiz nuevo'} y ${it.salen} sale${it.salen!==1?'n':''} de la ficha.</div>`:''}
    ${it.aviso?`<div class="fx-aviso">${fxEsc(it.aviso)}</div>`:''}
@@ -5757,7 +5859,7 @@ async function fxGuardarCarga(i, sinRefrescar){
  if(b){ b.disabled = true; b.textContent = 'Guardando...'; }
  try{
   const f = await fxReq('fichas?on_conflict=numero','POST',{
-   numero: it.ficha, grupo, programa: prog, programa_reporte: it.programa||null, datos_reporte: it.datos||{},
+   numero: it.ficha, grupo, programa: prog, ...(it.competencias && it.competencias.length ? {competencias: it.competencias} : {}), programa_reporte: it.programa||null, datos_reporte: it.datos||{},
    cargada_por: sesionActual.id, cargada_por_nombre: sesionActual.usuario==='admin' ? 'Administrador' : sesionActual.nombre,
    updated_at: new Date().toISOString()
   }, 'resolution=merge-duplicates,return=representation');
@@ -5823,7 +5925,7 @@ async function fxRenderLideres(){
   ]);
   fxUsuarios = usrs||[];
   const nom = {}; fxUsuarios.forEach(u => nom[u.id] = u.nombre);
-  body.innerHTML = `<div class="fx-muted" style="margin-bottom:6px;">Los líderes cargan los Reportes de Juicios de su programa, eliminan fichas al cambiar de trimestre y retiran aprendices. Un programa puede tener varios líderes y una persona puede liderar varios programas.</div>` +
+  body.innerHTML = `<div class="fx-sobre" style="margin-bottom:6px;">Los líderes cargan los Reportes de Juicios de su programa, eliminan fichas al cambiar de trimestre y retiran aprendices. Un programa puede tener varios líderes y una persona puede liderar varios programas.</div>` +
    FX.programas.map((p,i) => {
     const ls = (lids||[]).filter(l => l.programa===p);
     const libres = fxUsuarios.filter(u => !ls.some(l => l.usuario_id===u.id));
@@ -5857,9 +5959,12 @@ function fxEnc(lista){ return encodeURIComponent('(' + lista.map(x => '"'+String
 async function fxTomarAsistencia(fid, fecha){
  const f = FX.fichasCache[fid];
  if(!f) return;
+ if(!FX.misAsoc || !FX.misAsoc[fid]) await fxTraerMias();
+ const asoc = (FX.misAsoc||{})[fid];
+ if(FX.misFichas.has(fid) && (!asoc || !asoc.competencia)){ fxDefinirCompetencia(fid, 'asistencia'); return; }
  FX.asis = { fid, f, fecha: fecha || fxHoy(), marcas: {}, previas: new Set(), sesionId: null, aps: [], conteo: {} };
  const body = document.getElementById('fx-body');
- body.innerHTML = '<div class="fx-muted" style="padding:20px;text-align:center;">Cargando aprendices...</div>';
+ body.innerHTML = '<div class="fx-sobre" style="padding:20px;text-align:center;">Cargando aprendices...</div>';
  document.getElementById('fx-vista').scrollTop = 0;
  await fxCargarAsistencia();
 }
@@ -5887,19 +5992,20 @@ function fxPintarAsistencia(){
  const body = document.getElementById('fx-body');
  const faltan = A.aps.filter(a => A.marcas[a.documento]).length;
  body.innerHTML = `
-  <button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="fxIrTab('mias')">← Mis fichas</button>
+  <button type="button" class="fx-btn fx-btn-s fx-btn-sm" style="border:none;box-shadow:0 2px 8px rgba(0,0,0,.12);" onclick="fxIrTab('mias')">← Mis fichas</button>
   <div class="fx-card" style="margin-top:10px;">
    <div class="fx-ficha-num" style="font-size:17px;">${fxEtiqueta(f)}</div>
    <div class="fx-muted" style="margin-bottom:10px;">${fxEsc(f.programa)}</div>
    <div style="display:grid;grid-template-columns:1fr;gap:10px;">
     <div><label class="fx-muted">Fecha de la clase</label>
      <input type="date" class="fx-input" value="${A.fecha}" max="${fxHoy()}" onchange="if(this.value){FX.asis.fecha=this.value;fxCargarAsistencia();}"></div>
-    <div><label class="fx-muted">Competencia o tema de la clase <span style="opacity:.7">(opcional)</span></label>
-     <input type="text" class="fx-input" id="fx-asis-tema" value="${fxEsc(A.tema||'')}" placeholder="Ej: Programación CNC torno"></div>
+    ${(()=>{ const c = (FX.misAsoc||{})[f.id]||{}; return c.competencia ? `<div style="background:#f3faf1;border:1px solid #cfe5c8;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.45;">
+      <div style="font-weight:700;color:#27500A;margin-bottom:2px;">Competencia</div>${fxEsc(c.competencia)}
+      <div style="font-weight:700;color:#27500A;margin:6px 0 2px;">Resultado${c.resultados.length!==1?'s':''} de aprendizaje</div>${c.resultados.map(r => '• '+fxEsc(r)).join('<br>')}</div>` : ''; })()}
    </div>
    ${A.sesionId?`<div class="fx-aviso">Ya registraste la asistencia de este día. Puedes corregirla y guardar de nuevo.</div>`:''}
   </div>
-  <div class="fx-muted" style="margin:4px 2px 8px;">Toca a quien <b>no asistió</b>. Todos los demás quedan como presentes.</div>
+  <div class="fx-sobre" style="margin:4px 2px 8px;">Toca a quien <b>no asistió</b>. Todos los demás quedan como presentes.</div>
   ${A.aps.length ? A.aps.map(a => {
    const no = !!A.marcas[a.documento];
    const n = (A.conteo[a.documento]||0) - (A.previas.has(a.documento)?1:0) + (no?1:0);
@@ -5908,14 +6014,13 @@ function fxPintarAsistencia(){
      <div class="fx-muted">${fxEsc(a.tipo_doc||'')} ${fxEsc(a.documento)}${n?` · <span style="color:${n>=FX_LIMITE_RUTA?'#c0392b':'#7a5a00'};font-weight:600;">${n} inasistencia${n!==1?'s':''}</span>`:''}</div></div>
     <span class="fx-btn fx-btn-sm ${no?'fx-btn-d':'fx-btn-p'}" style="pointer-events:none;">${no?'No asistió':'Asistió'}</span></div>`;
   }).join('') : '<div class="fx-aviso">Esta ficha no tiene aprendices en formación.</div>'}
-  <div style="position:sticky;bottom:0;background:#f5f6fa;padding:10px 0 4px;margin-top:6px;">
+  <div class="fx-pie">
    <div class="fx-muted" style="text-align:center;margin-bottom:6px;">Asistieron <b>${A.aps.length-faltan}</b> · No asistieron <b style="color:${faltan?'#c0392b':'inherit'}">${faltan}</b></div>
    <button type="button" class="fx-btn fx-btn-p" style="width:100%;padding:12px;" id="fx-asis-guardar" onclick="fxGuardarAsistencia()" ${A.aps.length?'':'disabled'}>Guardar asistencia</button>
   </div>`;
 }
 function fxMarcar(doc){
  const A = FX.asis;
- const t = document.getElementById('fx-asis-tema'); if(t) A.tema = t.value;
  A.marcas[doc] = !A.marcas[doc];
  const y = document.getElementById('fx-vista').scrollTop;
  fxPintarAsistencia();
@@ -5923,7 +6028,7 @@ function fxMarcar(doc){
 }
 async function fxGuardarAsistencia(){
  const A = FX.asis, f = A.f;
- const t = document.getElementById('fx-asis-tema'); if(t) A.tema = t.value.trim();
+ const asoc = (FX.misAsoc||{})[f.id] || {};
  if(A.fecha > fxHoy()){ alert('La fecha no puede ser futura.'); return; }
  const btn = document.getElementById('fx-asis-guardar');
  btn.disabled = true; btn.textContent = 'Guardando...';
@@ -5932,7 +6037,7 @@ async function fxGuardarAsistencia(){
  try{
   const s = await fxReq('asistencia_sesiones?on_conflict=ficha_numero,usuario_id,fecha','POST',{
    ficha_id: f.id, ficha_numero: f.numero, usuario_id: sesionActual.id, instructor_nombre: nombreIns,
-   fecha: A.fecha, tema: A.tema||null, total_aprendices: A.aps.length, total_inasistencias: ausentes.length,
+   fecha: A.fecha, tema: asoc.competencia||null, competencia: asoc.competencia||null, resultados: asoc.resultados||[], total_aprendices: A.aps.length, total_inasistencias: ausentes.length,
    updated_at: new Date().toISOString()
   }, 'resolution=merge-duplicates,return=representation');
   const sid = s[0].id;
@@ -5999,7 +6104,7 @@ async function fxContarAlertas(){
  }catch(e){ FX.nAlertas = 0; }
  fxPintarTarjetaHome();
  const b = document.getElementById('fx-btn-admin-mias');
- if(b){ const d = b.querySelector('div div'); if(d) d.innerHTML = 'Registro de asistencia' + (FX.nAlertas?` <span class="fx-pill" style="background:#fdecea;color:#c0392b;">${FX.nAlertas}</span>`:''); }
+ const d = document.getElementById('fx-adm-asis-tit'); if(d) d.innerHTML = 'Registro de asistencia' + (FX.nAlertas?` <span class="fx-pill" style="background:#fdecea;color:#c0392b;">${FX.nAlertas}</span>`:'');
 }
 async function fxRenderAlertas(){
  const body = document.getElementById('fx-body');
@@ -6015,7 +6120,7 @@ async function fxRenderAlertas(){
   const nuevas = r.filter(x => x.created_at > desde).length;
   if(!r.length){ body.innerHTML = '<div class="fx-card fx-vacio"><p>No hay inasistencias registradas por otros instructores en tus fichas.</p></div>'; return; }
   body.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
-    <div class="fx-muted">${nuevas?`<b style="color:#c0392b">${nuevas} nueva${nuevas!==1?'s':''}</b> · `:''}Revisa si el aprendiz también faltó en tu clase</div>
+    <div class="fx-sobre">${nuevas?`<b>${nuevas} nueva${nuevas!==1?'s':''}</b> · `:''}Revisa si el aprendiz también faltó en tu clase</div>
     ${nuevas?`<button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="fxMarcarRevisadas()">Marcar revisadas</button>`:''}</div>` +
    r.map(x => {
     const f = mapa[x.ficha_numero] || {numero:x.ficha_numero};
