@@ -1056,6 +1056,7 @@ window.addEventListener('load', ()=>{
  <!-- PASO 1: Aprendiz -->
  <div id="ppanel1" class="panel active">
 
+ <div class="card" id="fx-sel-pa"></div>
  <!-- Carga del reporte -->
  <div class="card" id="card-reporte">
  <h2>Cargar Reporte de Juicios Evaluativos</h2>
@@ -1365,6 +1366,7 @@ window.addEventListener('load', ()=>{
 
  <!-- BLOQUE 1: Aprendiz -->
  <div id="dpanel1" class="panel active">
+  <div class="card" id="fx-sel-pd"></div>
   <div class="card">
    <h2>Cargar Reporte de Juicios Evaluativos</h2>
    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
@@ -2105,8 +2107,10 @@ function generarPDF(){
  // PRIMER LLAMADO: la sección 3 continúa justo después de la sección 2.
  // La firma va anclada al pie de la última página; si el párrafo no cabe completo
  // junto con la firma, pasan a la página siguiente solo las últimas líneas.
- const FIRMA_ANCLADA_Y = PAGE_H - 15 - 15; // posición ideal del nombre del firmante
- const FIRMA_MAX_Y = PAGE_H - 24;            // puede bajar un poco si el texto lo necesita
+ // La firma va SIEMPRE 50 mm debajo del último párrafo. Si no cabe, pasan a la página
+ // siguiente las últimas líneas del párrafo junto con la firma.
+ const SEP_FIRMA = 50, LIMITE_FIRMA = PAGE_H - 10;
+ const BLOQUE_FIRMA = SEP_FIRMA + 5*getCargoFirmante().split('\n').length + 2;
  const segS3 = [
  {t:'La presente comunicación corresponde a un '},
  {t:tituloLlamado, b:true},
@@ -2122,17 +2126,16 @@ function generarPDF(){
  const TITULO_H = 9.5, LINEA = 5.5, MIN_LINEAS = 3;
  const limite = PAGE_H - MARGIN_BOTTOM;
  let corte = 0;
- if(y + TITULO_H + lineasS3*LINEA + 10 > FIRMA_MAX_Y){
+ if(y + TITULO_H + lineasS3*LINEA - LINEA + BLOQUE_FIRMA > LIMITE_FIRMA){
  const caben = Math.floor((limite - (y + TITULO_H)) / LINEA);
  if(caben < MIN_LINEAS){ doc.addPage(); y = 14; }
  else { corte = Math.min(caben, lineasS3 - MIN_LINEAS); if(corte < MIN_LINEAS){ doc.addPage(); y = 14; corte = 0; } }
  }
  y=writeJustified('3. Medidas formativas aplicada', y, true); y+=4;
- y=writeJustifiedMixed(segS3, y, corte); y+=10;
+ y=writeJustifiedMixed(segS3, y, corte);
 
- // Pie primer llamado — firma al pie de la página
- let yFirma = Math.max(FIRMA_ANCLADA_Y, y);
- if(yFirma > FIRMA_MAX_Y){ doc.addPage(); yFirma = FIRMA_ANCLADA_Y; }
+ // Pie primer llamado — firma 50 mm debajo de la última línea del párrafo
+ let yFirma = (y - LINEA) + SEP_FIRMA;
  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...BLACK);
  doc.text(getFirmante().toUpperCase(), ml, yFirma);
  doc.setFont('helvetica','normal');
@@ -2145,6 +2148,16 @@ function generarPDF(){
  const TITULO_S3_H = 8;
  const PARRAFO_S3_ESTIMADO = 70;
  const FIRMA_S3_H = 22;
+ const SEP_FIRMA2 = 50, LINEA2 = 5.5, LIMITE_FIRMA2 = PAGE_H - 10;
+ const BLOQUE_FIRMA2 = SEP_FIRMA2 + 5 + 5*getCargoFirmante().split('\n').length + 2;
+ // Escribe el último párrafo dejando espacio para la firma; si no cabe, sus últimas líneas pasan con la firma
+ const parrafoFinal = (segs, sy) => {
+  const n = armarLineasMixed(segs).length, MIN = 3;
+  if(sy + n*LINEA2 - LINEA2 + BLOQUE_FIRMA2 <= LIMITE_FIRMA2) return writeJustifiedMixed(segs, sy);
+  const caben = Math.floor(((PAGE_H - MARGIN_BOTTOM) - sy) / LINEA2);
+  if(caben < MIN || n - MIN < MIN){ doc.addPage(); return writeJustifiedMixed(segs, 14); }
+  return writeJustifiedMixed(segs, sy, Math.min(caben, n - MIN));
+ };
  const espacioS3 = (PAGE_H - MARGIN_BOTTOM) - y;
  if(espacioS3 < TITULO_S3_H + 5.5*3){ // solo evita que el título quede solo al final de la página
  doc.addPage(); y = 14;
@@ -2196,11 +2209,11 @@ function generarPDF(){
  {t:', conforme a lo dispuesto en el '},
  {t:'Acuerdo 0009 de 2024 del Reglamento del Aprendiz SENA.', b:true}
  ],y); y+=8;
- y=writeJustifiedMixed([
+ y=parrafoFinal([
  {t:'Como evidencia del conocimiento y aceptación de las recomendaciones antes descritas, '},
  {t:'el aprendiz deberá firmar un Acta de Compromiso Disciplinario', b:true},
  {t:', comprometiéndose a cumplir las acciones de mejora establecidas para corregir las situaciones evidenciadas.'}
- ],y); y+=8;
+ ],y);
 
  } else {
  // Académico: solo preventivo, orientaciones académicas, 6 viñetas
@@ -2239,20 +2252,16 @@ function generarPDF(){
  y+=6;
  y=checkPage(y, 5.5*3);
  y=writeJustified('El incumplimiento de las anteriores recomendaciones de mejoramiento académico o la persistencia de las situaciones aquí descritas dará lugar a la aplicación de la siguiente medida formativa, correspondiente a la formulación e implementación de un Plan de Mejoramiento Académico, de conformidad con lo establecido en el Reglamento del Aprendiz SENA.',y,false); y+=8;
- y=writeJustifiedMixed([
+ y=parrafoFinal([
  {t:'Como evidencia del conocimiento y aceptación de las orientaciones académicas antes descritas, '},
  {t:'el aprendiz deberá firmar un Acta de Compromiso académico', b:true},
  {t:', comprometiéndose a cumplir las acciones de mejora establecidas para corregir las situaciones evidenciadas.'}
- ],y); y+=8;
+ ],y);
  }
 
- // Firma anclada a 15mm del borde inferior 
+ // Firma: línea a 50 mm debajo de la última línea del último párrafo
  const firmaW = 75;
- let FIRMA_Y_BASE = Math.max(PAGE_H - 15 - 18, y); // línea de firma; baja un poco si hace falta
- if(FIRMA_Y_BASE > PAGE_H - 28){
- // No cabe en esta página: pasan con la firma las últimas líneas
- doc.addPage(); FIRMA_Y_BASE = PAGE_H - 15 - 18;
- }
+ let FIRMA_Y_BASE = (y - LINEA2) + SEP_FIRMA2;
  doc.setDrawColor(...BLACK);
  doc.setLineWidth(0.4);
  doc.line(ml, FIRMA_Y_BASE, ml+firmaW, FIRMA_Y_BASE);
@@ -3773,6 +3782,7 @@ function filtrarCompetencias(q){
  ${c.sel?'<i class="ti ti-check" style="font-size:11px;color:white;" aria-hidden="true"></i>':''}
  </div>
  <div style="flex:1;min-width:0;">
+ ${c.pend?`<span style="display:inline-block;font-size:10px;font-weight:700;background:#fdecea;color:#c0392b;border-radius:8px;padding:1px 7px;margin-bottom:4px;">PENDIENTE</span>`:''}
  ${compCode?`<div style="font-size:11px;font-weight:500;color:${c.sel?'#27500A':'var(--color-text-secondary)'};text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">${compCode}</div>`:''}
  <div style="font-size:13px;color:${c.sel?'#27500A':'var(--color-text-primary)'};margin-bottom:4px;line-height:1.4;">${compName||c.comp}</div>
  <div style="font-size:12px;color:${c.sel?'#3B6D11':'var(--color-text-secondary)'};line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${c.ra||''}</div>
@@ -5337,7 +5347,7 @@ aplicarVista();
 <div id="fx-vista" class="fx-vista">
  <div class="fx-top">
   <img id="fx-logo" alt="SENA">
-  <div style="min-width:0;flex:1;"><div class="fx-titulo" id="fx-titulo-txt">Registro de asistencia</div><div class="fx-sub" id="fx-sub"></div></div>
+  <div style="min-width:0;flex:1;"><div class="fx-titulo" id="fx-titulo-txt">Registro de inasistencia</div><div class="fx-sub" id="fx-sub"></div></div>
   <button type="button" class="fx-campana" data-fx-campana onclick="fxAbrir('alertas')" title="Notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="fx-badge"></span></button>
  </div>
  <div class="fx-nav"><button type="button" class="fx-volver" onclick="fxCerrar()">← Volver al inicio</button></div>
@@ -5439,7 +5449,7 @@ function fxPintarTarjetaHome(){
   mias.onclick = () => fxAbrir('asis');
   grid.insertBefore(mias, grid.firstChild);
  }
- mias.innerHTML = `<div class="menu-info"><h3>Registro de asistencia</h3><p>Toma asistencia en tus fichas. Desde aquí también asocias las fichas de tu horario</p></div><span class="menu-arrow">›</span>`;
+ mias.innerHTML = `<div class="menu-info"><h3>Registro de inasistencia</h3><p>Registra las inasistencias de tus fichas. Desde aquí también asocias las fichas de tu horario</p></div><span class="menu-arrow">›</span>`;
  // Tarjeta adicional solo para líderes y administradores: cargar fichas del programa
  let prog = document.getElementById('fx-card-programa');
  if(fxEsLider() || fxEsAdmin()){
@@ -5469,7 +5479,7 @@ function fxPintarBotonAdmin(){
  m.className = 'adm-opt';
  m.onclick = () => fxAbrir('asis');
  m.style.cssText = b.style.cssText;
- m.innerHTML = `<span style="font-size:24px;"></span><div style="flex:1;"><div id="fx-adm-asis-tit" style="font-size:15px;font-weight:600;color:#1a1a1a;">Registro de asistencia</div><div style="font-size:12px;color:#666;">Toma de asistencia y mis fichas</div></div><span style="color:#1565c0;font-size:18px;">›</span>`;
+ m.innerHTML = `<span style="font-size:24px;"></span><div style="flex:1;"><div id="fx-adm-asis-tit" style="font-size:15px;font-weight:600;color:#1a1a1a;">Registro de inasistencia</div><div style="font-size:12px;color:#666;">Inasistencias y mis fichas</div></div><span style="color:#1565c0;font-size:18px;">›</span>`;
  ref.parentNode.insertBefore(m, b);
 }
 
@@ -5502,8 +5512,8 @@ function fxIrTab(tab){
  document.getElementById('fx-tabs').innerHTML = tabs.map(([k,l]) => `<button type="button" class="fx-tab ${k===tab?'on':''}" onclick="fxIrTab('${k}')">${l}</button>`).join('');
  const body = document.getElementById('fx-body');
  body.innerHTML = '<div class="fx-sobre" style="padding:20px;text-align:center;">Cargando...</div>';
- const titulos = {asis:'Registro de asistencia', mias:'Mis fichas', alertas:'Notificaciones', cargar: FX.modo==='admin' ? 'Líderes y fichas' : 'Fichas del programa', lideres:'Líderes y fichas'};
- document.getElementById('fx-titulo-txt').textContent = titulos[tab] || 'Registro de asistencia';
+ const titulos = {asis:'Registro de inasistencia', mias:'Mis fichas', alertas:'Notificaciones', cargar: FX.modo==='admin' ? 'Líderes y fichas' : 'Fichas del programa', lideres:'Líderes y fichas'};
+ document.getElementById('fx-titulo-txt').textContent = titulos[tab] || 'Registro de inasistencia';
  document.getElementById('fx-vista').scrollTop = 0;
  if(tab==='asis') fxRenderAsis();
  else if(tab==='mias') fxRenderMias();
@@ -5535,7 +5545,7 @@ function fxAgrupar(fichas){
  return Object.keys(g).sort((a,b) => fxOrdenPrograma(a)-fxOrdenPrograma(b) || a.localeCompare(b,'es')).map(p => [p, g[p]]);
 }
 
-// ── Registro de asistencia: pantalla principal ──
+// ── Registro de inasistencia: pantalla principal ──
 async function fxRenderAsis(){
  const body = document.getElementById('fx-body');
  try{
@@ -5546,25 +5556,25 @@ async function fxRenderAsis(){
     <div style="width:42px;height:42px;border-radius:12px;background:#EAF3DE;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">
      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#27500A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
     <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:15px;">Mis fichas</div>
-     <div class="fx-muted">Asocia o quita las fichas a las que les tomas asistencia</div></div>
+     <div class="fx-muted">Asocia o quita las fichas en las que registras inasistencias</div></div>
     <span style="color:#27500A;font-size:20px;">›</span></div>`;
   if(!mias.length){
-   body.innerHTML = herramienta + `<div class="fx-card fx-vacio"><h3>Aún no tienes fichas para tomar asistencia</h3>
+   body.innerHTML = herramienta + `<div class="fx-card fx-vacio"><h3>Aún no tienes fichas para registrar inasistencias</h3>
     <p>Entra a <b>Mis fichas</b> y asocia los grupos que tienes en tu horario.</p>
     <button type="button" class="fx-btn fx-btn-p" onclick="fxIrTab('mias')">Ir a Mis fichas</button></div>`;
    return;
   }
-  body.innerHTML = herramienta + `<div class="fx-sobre" style="margin:0 2px 8px;font-weight:600;">Toca una ficha para tomar asistencia</div>` +
+  body.innerHTML = herramienta + `<div class="fx-sobre" style="margin:0 2px 8px;font-weight:600;">Toca una ficha para registrar inasistencias</div>` +
    mias.map(f => { const c = FX.misAsoc[f.id]||{};
     return `<div class="fx-ficha" style="cursor:pointer;" onclick="fxTomarAsistencia('${f.id}')">
      <div class="fx-ficha-info"><div class="fx-ficha-num">${fxEtiqueta(f)}</div>
       <div class="fx-muted">${f.nApr} aprendices${c.competencia?' · '+fxEsc(c.competencia.length>70?c.competencia.slice(0,70)+'…':c.competencia):''}</div>
 </div>
-     <span class="fx-btn fx-btn-p fx-btn-sm" style="pointer-events:none;">Tomar asistencia</span></div>`; }).join('');
+     <span class="fx-btn fx-btn-p fx-btn-sm" style="pointer-events:none;">Registrar inasistencias</span></div>`; }).join('');
  }catch(e){ body.innerHTML = `<div class="fx-aviso fx-err">No se pudieron cargar tus fichas. (${fxEsc(e.message)})</div>`; }
 }
 
-// ── Mis fichas (herramienta dentro de Registro de asistencia) ──
+// ── Mis fichas (herramienta dentro de Registro de inasistencia) ──
 async function fxRenderMias(){
  const body = document.getElementById('fx-body');
  try{
@@ -5572,13 +5582,13 @@ async function fxRenderMias(){
   const todas = FX.misFichas.size ? await fxTraerFichas() : [];
   const mias = todas.filter(f => FX.misFichas.has(f.id));
   if(!mias.length){
-   body.innerHTML = `<button type="button" class="fx-btn fx-btn-s fx-btn-sm" style="border:none;box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:10px;" onclick="fxIrTab('asis')">← Registro de asistencia</button><div class="fx-card fx-vacio">
+   body.innerHTML = `<button type="button" class="fx-btn fx-btn-s fx-btn-sm" style="border:none;box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:10px;" onclick="fxIrTab('asis')">← Registro de inasistencia</button><div class="fx-card fx-vacio">
     <h3>Todavía no tienes fichas asociadas</h3>
-    <p>Asocia a tu perfil las fichas de tu proceso formativo. Así podrás tomar asistencia y consultar sus aprendices.</p>
+    <p>Asocia a tu perfil las fichas de tu proceso formativo. Así podrás registrar inasistencias y consultar sus aprendices.</p>
     <button type="button" class="fx-btn fx-btn-p" onclick="fxAbrirAsociar()">Asociar fichas a mi perfil</button></div>`;
    return;
   }
-  body.innerHTML = `<button type="button" class="fx-btn fx-btn-s fx-btn-sm" style="border:none;box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:10px;" onclick="fxIrTab('asis')">← Registro de asistencia</button>
+  body.innerHTML = `<button type="button" class="fx-btn fx-btn-s fx-btn-sm" style="border:none;box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:10px;" onclick="fxIrTab('asis')">← Registro de inasistencia</button>
    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px;">
     <div class="fx-sobre">${mias.length} ficha${mias.length!==1?'s':''} asociada${mias.length!==1?'s':''} a tu perfil</div>
     <button type="button" class="fx-btn fx-btn-p fx-btn-sm" onclick="fxAbrirAsociar()">+ Asociar fichas</button></div>` +
@@ -5853,8 +5863,9 @@ function fxLeerReporte(data){
   }
  }
  const enc = (rows[headerRow]||[]).map(h => fxNorm(h));
- let iC = enc.findIndex(h => h.includes('COMPETENCIA')), iR = enc.findIndex(h => h.includes('RESULTADO'));
- if(iC < 0) iC = 5; if(iR < 0) iR = 6;
+ let iC = enc.findIndex(h => h.includes('COMPETENCIA')), iR = enc.findIndex(h => h.includes('RESULTADO')), iJ = enc.findIndex(h => h.includes('JUICIO'));
+ if(iC < 0) iC = 5; if(iR < 0) iR = 6; if(iJ < 0) iJ = 7;
+ const pend = {};
  const comps = {};
  for(let i=headerRow+1; i<rows.length; i++){
   const row = rows[i];
@@ -5862,7 +5873,12 @@ function fxLeerReporte(data){
   if(!c) continue;
   (comps[c] = comps[c] || new Set());
   if(r) comps[c].add(r);
+  // Resultados que el aprendiz aún no tiene aprobados (por evaluar, no aprobado...)
+  const doc = String(row[1]||'').replace(/[^0-9A-Za-z]/g,'');
+  const juicio = fxNorm(row[iJ]);
+  if(r && doc && mapa[doc] && juicio !== 'APROBADO'){ (pend[doc] = pend[doc] || new Set()).add(r); }
  }
+ Object.keys(mapa).forEach(d => mapa[d].pendientes = [...(pend[d]||[])]);
  const competencias = Object.keys(comps).map(c => ({ competencia: c, resultados: [...comps[c]] }));
  return { ficha, programa, datos, competencias, aprendices: Object.values(mapa) };
 }
@@ -6025,7 +6041,7 @@ async function fxQuitarLider(uid, i){
 }
 
 
-// ═══ REGISTRO DE ASISTENCIA ═══
+// ═══ REGISTRO DE INASISTENCIA ═══
 function fxHoy(){ return new Date().toLocaleDateString('en-CA',{timeZone:'America/Bogota'}); }
 function fxFechaCorta(d){ try{ return new Date(d+'T12:00:00').toLocaleDateString('es-CO',{weekday:'short',day:'numeric',month:'short'}); }catch(e){ return d; } }
 const FX_LIMITE_RUTA = 3;
@@ -6065,7 +6081,7 @@ function fxPintarAsistencia(){
  const body = document.getElementById('fx-body');
  const faltan = A.aps.filter(a => A.marcas[a.documento]).length;
  body.innerHTML = `
-  <button type="button" class="fx-btn fx-btn-s fx-btn-sm" style="border:none;box-shadow:0 2px 8px rgba(0,0,0,.12);" onclick="fxIrTab('asis')">← Registro de asistencia</button>
+  <button type="button" class="fx-btn fx-btn-s fx-btn-sm" style="border:none;box-shadow:0 2px 8px rgba(0,0,0,.12);" onclick="fxIrTab('asis')">← Registro de inasistencia</button>
   <div class="fx-card" style="margin-top:10px;">
    <div class="fx-ficha-num" style="font-size:17px;">${fxEtiqueta(f)}</div>
    <div class="fx-muted" style="margin-bottom:10px;">${fxEsc(f.programa)}</div>
@@ -6076,7 +6092,7 @@ function fxPintarAsistencia(){
       <div style="font-weight:700;color:#27500A;margin-bottom:2px;">Competencia</div>${fxEsc(c.competencia)}
       <div style="font-weight:700;color:#27500A;margin:6px 0 2px;">Resultado${c.resultados.length!==1?'s':''} de aprendizaje</div>${c.resultados.map(r => '• '+fxEsc(r)).join('<br>')}</div>` : ''; })()}
    </div>
-   ${A.sesionId?`<div class="fx-aviso">Ya registraste la asistencia de este día. Puedes corregirla y guardar de nuevo.</div>`:''}
+   ${A.sesionId?`<div class="fx-aviso">Ya registraste las inasistencias de este día. Puedes corregirlas y guardar de nuevo.</div>`:''}
   </div>
   <div class="fx-sobre" style="margin:4px 2px 8px;">Toca a quien <b>no asistió</b>. Todos los demás quedan como presentes.</div>
   ${A.aps.length ? A.aps.map(a => {
@@ -6089,7 +6105,7 @@ function fxPintarAsistencia(){
   }).join('') : '<div class="fx-aviso">Esta ficha no tiene aprendices en formación.</div>'}
   <div class="fx-pie">
    <div class="fx-muted" style="text-align:center;margin-bottom:6px;">Asistieron <b>${A.aps.length-faltan}</b> · No asistieron <b style="color:${faltan?'#c0392b':'inherit'}">${faltan}</b></div>
-   <button type="button" class="fx-btn fx-btn-p" style="width:100%;padding:12px;" id="fx-asis-guardar" onclick="fxGuardarAsistencia()" ${A.aps.length?'':'disabled'}>Guardar asistencia</button>
+   <button type="button" class="fx-btn fx-btn-p" style="width:100%;padding:12px;" id="fx-asis-guardar" onclick="fxGuardarAsistencia()" ${A.aps.length?'':'disabled'}>Guardar inasistencias</button>
   </div>`;
 }
 function fxMarcar(doc){
@@ -6126,15 +6142,15 @@ async function fxGuardarAsistencia(){
   const ruta = ausentes.map(a => [a, (A.conteo[a.documento]||0) - (A.previas.has(a.documento)?1:0) + 1]).filter(([a,n]) => n >= FX_LIMITE_RUTA);
   const body = document.getElementById('fx-body');
   body.innerHTML = `<div class="fx-card" style="text-align:center;padding:24px 16px;">
-    <h3 style="font-size:17px;">Asistencia guardada</h3>
+    <h3 style="font-size:17px;">Inasistencias registradas</h3>
     <div class="fx-muted" style="margin:6px 0 4px;">${fxEtiqueta(f)} · ${fxFechaCorta(A.fecha)}</div>
     <div style="font-size:14px;margin:10px 0;">Asistieron <b>${A.aps.length-ausentes.length}</b> de ${A.aps.length}</div>
     ${nuevos.length?`<div class="fx-aviso">Se avisó de ${nuevos.length} inasistencia${nuevos.length!==1?'s':''} a los demás instructores asociados a esta ficha.</div>`:''}
     ${ruta.map(([a,n]) => `<div class="fx-aviso fx-err"><b>${fxEsc(fxNombreApr(a).toUpperCase())}</b> completa ${n} inasistencias. Corresponde el reporte de la ruta de prevención.</div>`).join('')}
-    <button type="button" class="fx-btn fx-btn-p" style="margin-top:14px;width:100%;" onclick="fxIrTab('asis')">Volver al registro de asistencia</button></div>`;
+    <button type="button" class="fx-btn fx-btn-p" style="margin-top:14px;width:100%;" onclick="fxIrTab('asis')">Volver al registro de inasistencia</button></div>`;
  }catch(e){
-  alert('No se pudo guardar la asistencia: '+e.message);
-  btn.disabled = false; btn.textContent = 'Guardar asistencia';
+  alert('No se pudieron guardar las inasistencias: '+e.message);
+  btn.disabled = false; btn.textContent = 'Guardar inasistencias';
  }
 }
 
@@ -6182,7 +6198,7 @@ async function fxContarAlertas(){
 }
 async function fxRenderAlertas(){
  const body = document.getElementById('fx-body');
- const atras = `<button type="button" class="fx-btn fx-btn-s fx-btn-sm" style="border:none;box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:10px;" onclick="fxIrTab('asis')">← Registro de asistencia</button>`;
+ const atras = `<button type="button" class="fx-btn fx-btn-s fx-btn-sm" style="border:none;box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:10px;" onclick="fxIrTab('asis')">← Registro de inasistencia</button>`;
  try{
   const mapa = await fxNumerosAlerta();
   const nums = Object.keys(mapa);
@@ -6205,7 +6221,7 @@ async function fxRenderAlertas(){
      <div class="fx-muted">No asistió el ${fxFechaCorta(x.fecha)} a la clase de ${fxEsc(x.instructor_nombre||'')}<br>Ficha ${fxEtiqueta(f)} · <b style="color:${n>=FX_LIMITE_RUTA?'#c0392b':'#7a5a00'}">${n} inasistencia${n!==1?'s':''} en total</b></div>
      ${n>=FX_LIMITE_RUTA?'<div class="fx-aviso fx-err">Corresponde el reporte de la ruta de prevención.</div>':''}
      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-      ${f.id && FX.misFichas.has(f.id)?`<button type="button" class="fx-btn fx-btn-p fx-btn-sm" onclick="fxTomarAsistencia('${f.id}','${x.fecha}')">Revisar mi asistencia de ese día</button>`:''}
+      ${f.id && FX.misFichas.has(f.id)?`<button type="button" class="fx-btn fx-btn-p fx-btn-sm" onclick="fxTomarAsistencia('${f.id}','${x.fecha}')">Revisar mis inasistencias de ese día</button>`:''}
       <button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="fxHistorialAprendiz('${fxEsc(x.documento)}','${fxEsc((x.nombre_aprendiz||'').replace(/'/g,''))}')">Ver historial</button></div></div>`;
    }).join('');
   // Como en las apps de mensajería: al abrir las notificaciones se dan por vistas y el número rojo desaparece
@@ -6237,11 +6253,34 @@ async function fxsMontar(id, alElegir){
   FXS[id].fichas = fichas;
   if(!fichas.length){
    cont.innerHTML = `<h2>Elegir de mis fichas</h2>
-    <div class="fx-aviso" style="margin:0;">No tienes fichas asociadas a tu perfil. Asócialas en <b>Registro de asistencia → Mis fichas</b> y aquí podrás elegir el aprendiz. Mientras tanto, escribe los datos abajo.</div>`;
+    <div class="fx-aviso" style="margin:0;">No tienes fichas asociadas a tu perfil. Asócialas en <b>Registro de inasistencia → Mis fichas</b> y aquí podrás elegir el aprendiz. Mientras tanto, escribe los datos abajo.</div>`;
    return;
   }
   fxsPintar(id);
  }catch(e){ cont.innerHTML = `<h2>Elegir de mis fichas</h2><div class="fx-aviso fx-err" style="margin:0;">No se pudieron cargar tus fichas. Puedes escribir los datos abajo.</div>`; }
+}
+// En los planes se ofrecen las dos opciones: usar mis fichas o cargar un Reporte de Juicios
+function fxsPrepararModos(id){
+ const sel = document.getElementById(id), rep = sel && sel.nextElementSibling;
+ if(!sel || !rep || !FXS[id]) return;
+ FXS[id].reporteCard = rep;
+ let barra = document.getElementById(id+'-modos');
+ if(!barra){
+  barra = document.createElement('div');
+  barra.id = id+'-modos';
+  barra.style.cssText = 'display:flex;gap:6px;background:#eef3ec;border:1px solid #d6e3d1;border-radius:12px;padding:5px;margin-bottom:14px;';
+  sel.parentNode.insertBefore(barra, sel);
+ }
+ fxsModo(id, FXS[id].fichas.length ? 'fichas' : 'reporte');
+}
+function fxsModo(id, modo){
+ const S = FXS[id], barra = document.getElementById(id+'-modos');
+ if(!S || !barra) return;
+ S.modo = modo;
+ const b = (m, t) => `<button type="button" onclick="fxsModo('${id}','${m}')" style="flex:1;border:none;border-radius:9px;padding:10px 8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;${modo===m?'background:var(--green,#15851E);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);':'background:transparent;color:#44503f;'}">${t}</button>`;
+ barra.innerHTML = b('fichas','Usar mis fichas') + b('reporte','Cargar Reporte de Juicios');
+ document.getElementById(id).style.display = modo==='fichas' ? '' : 'none';
+ if(S.reporteCard) S.reporteCard.style.display = modo==='reporte' ? '' : 'none';
 }
 function fxsPintar(id){
  const S = FXS[id], cont = document.getElementById(id);
@@ -6260,7 +6299,7 @@ function fxsPintar(id){
    <select onchange="fxsElegirFicha('${id}', this.value)"><option value="">Seleccionar ficha...</option>
     ${S.fichas.map(f => `<option value="${f.id}" ${S.f&&S.f.id===f.id?'selected':''}>${fxEsc(f.numero)}${f.grupo?' – '+fxEsc(f.grupo):''}</option>`).join('')}</select></div>
   <div id="${id}-aps"></div>
-  <div class="fx-muted" style="margin-top:4px;">¿El aprendiz no está en la lista? Escribe sus datos abajo.</div>`;
+  <div class="fx-muted" style="margin-top:4px;">¿El aprendiz no está en la lista? ${S.reporteCard ? `<a href="#" onclick="event.preventDefault();fxsModo('${id}','reporte')" style="color:#1565c0;">Carga un Reporte de Juicios</a> o escribe` : 'Escribe'} sus datos abajo.</div>`;
  if(S.f) fxsPintarAprendices(id);
 }
 async function fxsElegirFicha(id, fid){
@@ -6272,7 +6311,7 @@ async function fxsElegirFicha(id, fid){
  try{
   const num = encodeURIComponent(S.f.numero);
   const [aps, ina, hist] = await Promise.all([
-   fxReq(`aprendices?ficha_id=eq.${S.f.id}&select=documento,tipo_doc,nombres,apellidos&order=apellidos.asc,nombres.asc`),
+   fxReq(`aprendices?ficha_id=eq.${S.f.id}&select=documento,tipo_doc,nombres,apellidos,pendientes&order=apellidos.asc,nombres.asc`),
    fxReq(`inasistencias?ficha_numero=eq.${num}&select=documento`),
    fxReq(`historial_documentos?ficha=eq.${num}&select=documento_aprendiz,tipo_documento,tipo_llamado,numero_llamado,fecha_documento&order=fecha_documento.asc`)
   ]);
@@ -6359,6 +6398,83 @@ function fxHintNumeroLlamado(){
  };
  const tipoOrig = selectTipo;
  selectTipo = function(){ const r = tipoOrig.apply(this, arguments); fxHintNumeroLlamado(); return r; };
+})();
+
+
+// ── Planes de mejoramiento: selector de mis fichas ──
+function fxsAvisoPlan(id, html, tipo){
+ let el = document.getElementById(id+'-estado');
+ if(!el){ el = document.createElement('div'); el.id = id+'-estado'; document.getElementById(id).appendChild(el); }
+ el.innerHTML = html ? `<div class="fx-aviso ${tipo||''}" style="margin-top:10px;">${html}</div>` : '';
+}
+function fxsAplicarCompetencias(comps, pend){
+ const p = new Set(pend||[]);
+ const lista = [];
+ (comps||[]).forEach(c => (c.resultados||[]).forEach(r => lista.push({comp: c.competencia, ra: r, conocimiento: '', sel: false, pend: p.has(r)})));
+ lista.sort((x,y) => (y.pend?1:0) - (x.pend?1:0));
+ competencias = lista.length ? lista : [{comp:'',ra:'',conocimiento:'',sel:true}];
+ renderCompetencias();
+ return { total: lista.length, pend: lista.filter(x => x.pend).length };
+}
+async function fxsCompetenciasPlan(a, f){
+ const id = 'fx-sel-pa';
+ fxsAvisoPlan(id, 'Cargando competencias de la ficha...');
+ try{
+  const r = await fxReq(`fichas?id=eq.${f.id}&select=competencias`);
+  const comps = (r&&r[0]&&r[0].competencias) || [];
+  if(comps.length){
+   const n = fxsAplicarCompetencias(comps, a.pendientes);
+   fxsAvisoPlan(id, `<b>${n.total}</b> resultados de aprendizaje precargados en el paso 3.` + (n.pend ? ` Los <b>${n.pend}</b> que este aprendiz tiene sin aprobar van primero, marcados como <b>Pendiente</b>.` : ''), 'fx-ok');
+   return;
+  }
+  fxsAvisoPlan(id, `Esta ficha todavía no tiene sus competencias. Sube aquí su Reporte de Juicios Evaluativos y se extraen automáticamente; quedan guardadas para la próxima vez.
+   <label class="fx-drop" style="margin-top:8px;background:#fff;"><strong>Subir Reporte de Juicios de la ficha ${fxEsc(f.numero)}</strong><span class="fx-muted">Formato .xls</span>
+   <input type="file" accept=".xls,.xlsx" style="display:none;" onchange="fxsSubirReportePlan(this)"></label>`);
+ }catch(e){ fxsAvisoPlan(id, 'No se pudieron cargar las competencias: '+fxEsc(e.message), 'fx-err'); }
+}
+async function fxsSubirReportePlan(input){
+ const file = input.files && input.files[0]; input.value = '';
+ if(!file) return;
+ const id = 'fx-sel-pa', S = FXS[id], f = S.f, a = S.sel;
+ fxsAvisoPlan(id, 'Leyendo el reporte...');
+ try{
+  const r = fxLeerReporte(new Uint8Array(await file.arrayBuffer()));
+  if(r.ficha !== String(f.numero)){ fxsAvisoPlan(id, `Ese reporte es de la ficha ${fxEsc(r.ficha||'—')}, no de la ${fxEsc(f.numero)}.`, 'fx-err'); return; }
+  if(!r.competencias.length){ fxsAvisoPlan(id, 'No se encontraron competencias en el reporte.', 'fx-err'); return; }
+  const pend = {}; r.aprendices.forEach(x => pend[x.documento] = x.pendientes||[]);
+  try{ await fxReq('rpc/app_guardar_juicios','POST',{p_ficha: f.id, p_comps: r.competencias, p_pend: pend}); }catch(e){ console.warn('No se guardaron los juicios', e); }
+  a.pendientes = pend[a.documento] || [];
+  S.aps.forEach(x => { if(pend[x.documento]) x.pendientes = pend[x.documento]; });
+  const n = fxsAplicarCompetencias(r.competencias, a.pendientes);
+  fxsAvisoPlan(id, `<b>${n.total}</b> resultados de aprendizaje precargados en el paso 3.` + (n.pend ? ` Los <b>${n.pend}</b> que este aprendiz tiene sin aprobar van primero, marcados como <b>Pendiente</b>.` : ''), 'fx-ok');
+ }catch(e){ fxsAvisoPlan(id, 'No se pudo leer el reporte: '+fxEsc(e.message), 'fx-err'); }
+}
+(function(){
+ const subOrig = abrirSubherramienta;
+ abrirSubherramienta = function(id){
+  const r = subOrig.apply(this, arguments);
+  if(id==='plan-academico'){
+   fxsMontar('fx-sel-pa', (a, f) => {
+    document.getElementById('p-nombre').value = fxNombreApr(a).toUpperCase();
+    document.getElementById('p-documento').value = String(a.documento).replace(/[^0-9]/g,'');
+    document.getElementById('p-ficha').value = f.numero;
+    fxsPonerPrograma('p-programa', f.programa);
+    fxsCompetenciasPlan(a, f);
+   }).then(() => { fxsPrepararModos('fx-sel-pa'); if(FXS['fx-sel-pa'] && FXS['fx-sel-pa'].fichas.length) fxsPintar('fx-sel-pa'); });
+  }
+  if(id==='plan-disciplinario'){
+   fxsMontar('fx-sel-pd', (a, f) => {
+    document.getElementById('d-nombre').value = fxNombreApr(a).toUpperCase();
+    document.getElementById('d-documento').value = String(a.documento).replace(/[^0-9]/g,'');
+    const t = (typeof tipoDocCorto==='function') ? tipoDocCorto(a.tipo_doc) : a.tipo_doc;
+    if(t) document.getElementById('d-tipo-doc').value = t;
+    document.getElementById('d-ficha').value = f.numero;
+    if(f.grupo) document.getElementById('d-grupo').value = f.grupo;
+    fxsPonerPrograma('d-programa', f.programa);
+   }).then(() => { fxsPrepararModos('fx-sel-pd'); if(FXS['fx-sel-pd'] && FXS['fx-sel-pd'].fichas.length) fxsPintar('fx-sel-pd'); });
+  }
+  return r;
+ };
 })();
 
 // ── Enganche con el inicio de sesión existente ──
