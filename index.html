@@ -4082,26 +4082,27 @@ function generarPlanPDF(){
  const txtLegal1 = 'Este Plan de Mejoramiento se realiza con base en el Artículo 46. Tipos de medidas formativas. del Acuerdo 0009 de 2024 del Reglamento del Aprendiz SENA, el cual establece que el Plan de mejoramiento es una medida formativa académica que garantiza el logro de los resultados de aprendizaje que no fueron superados y se aplica cuando se agotan los dos llamados de atención académicos realizados previamente al aprendiz. En este sentido, el presente plan tiene como objetivo establecer un conjunto de actividades que le permita al aprendiz el mejoramiento de sus resultados de aprendizaje no alcanzados.';
  const parrafos = [txtLegal1];
 
- // Justificación de la fecha de suscripción
- const txtSuscripcion = 'El presente Plan de Mejoramiento se suscribe el ' + fechaLetras2(pv('p-fecha-inicio')) + ' y deberá ejecutarse en el tiempo que indique el instructor o el equipo ejecutor, sin que supere el término de veinte (20) días calendario contados a partir de la fecha de suscripción del plan de mejoramiento; en consecuencia, la fecha límite para su cumplimiento es el ' + fechaLetras2(pv('p-fecha-fin')) + '. Cada actividad deberá entregarse en la fecha específica señalada en el numeral 3 del presente documento.';
- parrafos.push(txtSuscripcion);
-
- // Texto legal — párrafo 2
- const txtLegal2 = 'Este Plan de Mejoramiento es correctivo y formativo, por lo que esperamos contar con su compromiso en la entrega de las evidencias y cumplimiento de los criterios a evaluar. Si no se cumple con lo establecido en el plan de mejoramiento, se llevará a comité de evaluación y seguimiento, quienes definirán las medidas sancionatorias aplicar, teniendo en cuenta lo previsto en el reglamento.';
- parrafos.push(txtLegal2);
-
- // Estilo de aprendizaje
+ // Estilo de aprendizaje (variables: nombre del estilo, qué significa y qué actividades se priorizan)
  const estiloVal = getEstilo();
  if(estiloVal){
-   const ESTILOS_DESC = {
-     'Divergente (Siente y observa)': 'Aprende mejor cuando puede observar situaciones desde múltiples perspectivas, recopilar información y utilizar la imaginación para resolver problemas.',
-     'Asimilador (Piensa y reflexiona)': 'Aprende mejor procesando teorías, modelos abstractos y explicaciones lógicas bien estructuradas. Les importa más la coherencia lógica de una idea que su aplicación práctica inmediata.',
-     'Convergente (Piensa y hace)': 'Aprende mejor cuando puede tomar teorías y conceptos abstractos para aplicarlos en la solución práctica de problemas concretos.',
-     'Acomodador o Adaptador (Siente y hace)': 'Aprende fundamentalmente "haciendo", viviendo experiencias directas y adaptándose de forma flexible a circunstancias cambiantes.'
+   const ESTILOS = {
+     'Divergente (Siente y observa)': {
+       significa: 'aprende mejor cuando puede observar situaciones desde diferentes perspectivas, recopilar información y usar la imaginación para resolver problemas',
+       actividades: 'lluvia de ideas, análisis de situaciones desde distintos puntos de vista, trabajo colaborativo y observación de casos reales' },
+     'Asimilador (Piensa y reflexiona)': {
+       significa: 'aprende mejor cuando puede procesar teorías, modelos abstractos y explicaciones lógicas bien estructuradas',
+       actividades: 'lecturas guiadas, mapas conceptuales, análisis de modelos e informes técnicos' },
+     'Convergente (Piensa y hace)': {
+       significa: 'aprende mejor cuando puede aplicar teorías y conceptos abstractos a la solución práctica de problemas concretos',
+       actividades: 'estudios de caso, ejercicios prácticos y resolución de problemas' },
+     'Acomodador o Adaptador (Siente y hace)': {
+       significa: 'aprende mejor haciendo, a partir de experiencias directas y adaptándose con flexibilidad a situaciones cambiantes',
+       actividades: 'prácticas en taller, proyectos aplicados, simulaciones y aprendizaje basado en la experiencia' }
    };
-   const descEstilo = ESTILOS_DESC[estiloVal] || '';
-   const txtEstilo = 'Estilo de aprendizaje: El aprendiz presenta un estilo de aprendizaje predominantemente ' + estiloVal + '. ' + descEstilo + ' El equipo ejecutor tendrá en cuenta esta característica para orientar las actividades y estrategias de acompañamiento del presente plan.';
-   parrafos.push(txtEstilo);
+   const e = ESTILOS[estiloVal];
+   if(e){
+     parrafos.push('Para el diseño de dichas actividades se tiene en cuenta su estilo de aprendizaje predominantemente ' + estiloVal.toLowerCase() + '. Esto significa que ' + e.significa + '. Por esta razón, el equipo ejecutor priorizará actividades como: ' + e.actividades + ' propios del programa de formación, además de estrategias de acompañamiento acordes con este perfil.');
+   }
  }
 
  // Condición de aprendizaje
@@ -4111,6 +4112,9 @@ function generarPlanPDF(){
  const txtCond = 'Condición de aprendizaje: Se informa que el aprendiz presenta '+condTipo+'. En atención a esta situación, el equipo ejecutor se compromete a brindar el acompañamiento y los ajustes pedagógicos necesarios para garantizar su proceso formativo en igualdad de condiciones, en el marco de la política de inclusión del SENA.';
  parrafos.push(txtCond);
  }
+
+ // Compromiso y consecuencias
+ parrafos.push('Teniendo en cuenta que esta medida tiene un carácter formativo y correctivo, se espera el compromiso del aprendiz con la entrega oportuna de las evidencias, en las fechas establecidas en el presente documento, y con el cumplimiento de los criterios de evaluación. De no cumplirse lo establecido, el caso será remitido al Comité de Evaluación y Seguimiento, instancia que determinará las medidas a aplicar conforme a lo previsto en el Reglamento del Aprendiz.');
 
  // Todos los párrafos en un solo recuadro, sin líneas entre ellos
  y = drawBloqueParrafos(parrafos, y);
