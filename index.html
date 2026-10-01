@@ -890,7 +890,7 @@ window.addEventListener('load', ()=>{
  </div>
 
  <div class="field full" id="cd-nombre-reporta" style="display:none;">
- <label id="label-nombre-reporta">Nombre de quien reporta</label>
+ <label id="label-nombre-reporta">Nombre de quien reporta <span class="opc">(opcional: si lo dejas vacío, solo aparece el cargo)</span></label>
  <div class="instructor-combo">
  <input type="text" id="nombreReporta" placeholder="Escribe o selecciona..." autocomplete="off"
  oninput="filtrarInstructores('nombreReporta','dropdown-reporta')"
@@ -1143,7 +1143,12 @@ window.addEventListener('load', ()=>{
  <div class="card">
  <h2>Información general del plan</h2>
  <div class="grid2">
- <div class="field full"><label>Instructor responsable</label>
+ <div class="field full"><label>¿Quién reporta?</label>
+ <select id="p-reporta" onchange="actualizarReportaPlan()">
+  <option value="instructor">Instructor</option>
+  <option value="equipo">Equipo Ejecutor</option>
+ </select></div>
+ <div class="field full" id="p-campo-instructor"><label>Instructor responsable</label>
  <div class="instructor-combo">
  <input type="text" id="p-instructor" placeholder="Escribe o selecciona un instructor..." autocomplete="off"
  oninput="filtrarInstructores('p-instructor','dropdown-p-instructor')"
@@ -1460,6 +1465,11 @@ window.addEventListener('load', ()=>{
   <div class="card">
    <h2>Instructor</h2>
    <div class="grid2">
+    <div class="field full"><label>¿Quién reporta?</label>
+     <select id="d-reporta" onchange="aplicarInstructorSesionDisc()">
+      <option value="instructor">Instructor</option>
+      <option value="equipo">Equipo Ejecutor</option>
+     </select></div>
     <div class="field full" id="d-instructor-sesion" style="display:none;">
      <label>Instructor que realiza el plan</label>
      <div style="background:var(--green-light);border:1px solid #c0dd97;border-radius:8px;padding:10px 12px;">
@@ -1817,8 +1827,9 @@ function mostrarCampos(){
  const cdInstr = document.getElementById('cd-instructores-fijo');
  const cdNombre = document.getElementById('cd-nombre-reporta');
 
- // "¿Quién reporta?" es obligatorio para todos: se muestra siempre y se debe elegir
+ // "¿Quién reporta?": por defecto el instructor del perfil; se cambia solo si reporta el equipo u otra persona
  selectorWrap.style.display = 'block';
+ if(!qr.value && nombrePerfil()) qr.value = 'instructor';
  actualizarQuienReporta();
 
  // Validación paso 7: si es instructor no necesita validar quienReporta
@@ -1908,7 +1919,6 @@ function validateStep(n){
   const q = document.getElementById('quienReporta');
   if(!q || !q.value){ alert('Selecciona quién reporta.'); q&&q.focus(); return false; }
   if(q.value==='instructor' && !(document.getElementById('instructores').value||'').trim()){ alert('Escribe o selecciona el nombre del instructor que reporta.'); document.getElementById('instructores').focus(); return false; }
-  if(!['instructor','equipo'].includes(q.value) && !(document.getElementById('nombreReporta').value||'').trim()){ alert('Escribe el nombre de quien reporta.'); document.getElementById('nombreReporta').focus(); return false; }
  }
  const checks={1:[['nombreAprendiz','Nombre del aprendiz'],['documento','Número de documento'],['fecha','Fecha de reporte']],2:[['programa','Programa de formación'],['ficha','Número de ficha']],6:[],7:[['quienReporta','¿Quién reporta?']]};
  for(const[id,label]of(checks[n]||[])){const el=document.getElementById(id);if(!el||!el.value.trim()){alert('Por favor completa: '+label);el&&el.focus();return false;}}
@@ -2646,10 +2656,7 @@ function cerrarDropdown(dropdownId){
 // QUIÉN REPORTA 
 function actualizarQuienReporta(){
  const val = document.getElementById('quienReporta').value;
- if(val === 'instructor' && sesionActual && !sesionActual.es_admin){
-  const inp = document.getElementById('instructores');
-  if(inp && !inp.value) inp.value = sesionActual.nombre;
- }
+ if(val === 'instructor') fijarInstructorPerfil('instructores');
  const cdNombre = document.getElementById('cd-nombre-reporta');
  const cdInstr = document.getElementById('cd-instructores-fijo');
  const labelNombre = document.getElementById('label-nombre-reporta');
@@ -3548,17 +3555,28 @@ async function confirmarCargaMasiva(){
  alert(`Importación completada:\n ${ok} usuarios registrados\n${errores>0?' '+errores+' errores':''}`);
 }
 
+// Nombre del instructor según su perfil: cada quien entra con su propia cuenta
+function nombrePerfil(){ return (sesionActual && sesionActual.usuario !== 'admin') ? String(sesionActual.nombre||'').trim() : ''; }
+// Deja un campo de instructor fijo con el nombre del perfil (solo lectura) o editable si no hay perfil
+function fijarInstructorPerfil(inputId){
+ const inp = document.getElementById(inputId); if(!inp) return;
+ const n = nombrePerfil();
+ const btn = inp.parentElement && inp.parentElement.querySelector('.combo-btn');
+ if(n){ inp.value = n; inp.readOnly = true; inp.style.background = '#f3faf1'; if(btn) btn.style.display = 'none'; }
+ else { inp.readOnly = false; inp.style.background = ''; if(btn) btn.style.display = ''; }
+}
 function getTextoReporta(){
  const val = document.getElementById('quienReporta')?.value || 'instructor';
  const prog = document.getElementById('programa')?.value || '[programa]';
  const nombre = val === 'instructor'
  ? (v('instructores') || '[instructor]')
- : (v('nombreReporta') || '[nombre]');
+ : (v('nombreReporta') || '');
+ const conNombre = t => nombre ? t + ' ' + nombre : t;
  if(val === 'equipo') return 'el Equipo Ejecutor del programa ' + prog;
- if(val === 'bienestar') return 'la Profesional de Bienestar ' + nombre;
- if(val === 'coord-acad')return 'el Coordinador Académico ' + nombre;
- if(val === 'coord-form')return 'el Coordinador de Formación Profesional ' + nombre;
- if(val === 'subdirector')return 'el Subdirector de Centro ' + nombre;
+ if(val === 'bienestar') return conNombre('la Profesional de Bienestar');
+ if(val === 'coord-acad')return conNombre('el Coordinador Académico');
+ if(val === 'coord-form')return conNombre('el Coordinador de Formación Profesional');
+ if(val === 'subdirector')return conNombre('el Subdirector de Centro');
  return (rolInstructorDisc(nombre) === 'instructora' ? 'la instructora ' : 'el instructor ') + nombre;
 }
 
@@ -3566,7 +3584,7 @@ function getFirmante(){
  const val = document.getElementById('quienReporta')?.value || 'instructor';
  if(val === 'equipo') return 'Equipo Ejecutor';
  if(val === 'instructor') return v('instructores') || '[instructor]';
- return v('nombreReporta') || '[nombre]';
+ return v('nombreReporta') || '';
 }
 
 function getCargoFirmante(){
@@ -3801,6 +3819,12 @@ function sugerirTecnicas(id){
  // Solo se reemplaza si está vacío o si todavía tiene una sugerencia automática (no lo que escribió el instructor)
  if(!actual || Object.values(TECNICAS_SUGERIDAS).includes(actual)) t.value = TECNICAS_SUGERIDAS[id] || '';
 }
+function actualizarReportaPlan(){
+ const eq = document.getElementById('p-reporta').value === 'equipo';
+ document.getElementById('p-campo-instructor').style.display = eq ? 'none' : '';
+ if(!eq) fijarInstructorPerfil('p-instructor');
+ const ap = document.getElementById('p-aplica'); if(ap) ap.value = eq ? 'el equipo ejecutor' : 'el instructor';
+}
 function marcarEstilo(id){
  sugerirTecnicas(id);
  ['divergente','asimilador','convergente','acomodador'].forEach(e=>{
@@ -3842,6 +3866,7 @@ function initPlan(){
  document.getElementById('p-fecha').valueAsDate = new Date();
  document.getElementById('p-fecha-inicio').valueAsDate = new Date();
  calcularFechaFin();
+ if(document.getElementById('p-reporta')) actualizarReportaPlan();
 }
 
 function pGoTo(n){
@@ -3860,7 +3885,7 @@ function pGoTo(n){
 function pValidate(n){
  const checks = {
  1:[['p-nombre','Nombre del aprendiz'],['p-documento','Documento'],['p-ficha','Ficha'],['p-programa','Programa']],
- 2:[['p-instructor','Instructor'],['p-fecha','Fecha'],['p-fecha-inicio','Fecha inicio']]
+ 2:(document.getElementById('p-reporta')?.value==='equipo' ? [] : [['p-instructor','Instructor']]).concat([['p-fecha','Fecha'],['p-fecha-inicio','Fecha inicio']])
  };
  for(const [id,label] of (checks[n]||[])){
  const el=document.getElementById(id);
@@ -4036,7 +4061,7 @@ function buildPlanResumen(){
  <div class="preview-row"><span>Documento:</span><span>${pv('p-documento')}</span></div>
  <div class="preview-row"><span>Programa:</span><span>${pv('p-programa')}</span></div>
  <div class="preview-row"><span>Ficha:</span><span>${pv('p-ficha')}</span></div>
- <div class="preview-row"><span>Instructor:</span><span>${pv('p-instructor')}</span></div>
+ <div class="preview-row"><span>${pv('p-reporta')==='equipo'?'Responsable':'Instructor'}:</span><span>${pv('p-reporta')==='equipo'?'Equipo Ejecutor':pv('p-instructor')}</span></div>
  <div class="preview-row"><span>Fecha:</span><span>Barranquilla, ${ff}</span></div>
  <div class="preview-row"><span>Fecha inicio:</span><span>${ffi}</span></div>
  <div class="preview-row"><span>Fecha fin:</span><span>${fft}</span></div>
@@ -4241,7 +4266,8 @@ function generarPlanPDF(){
 
  let h;
  h = drawDataRow('FICHA/GRUPO:', pv('p-ficha'), y); y+=h;
- h = drawDataRow('INSTRUCTOR RESPONSABLE:', pv('p-instructor'), y); y+=h;
+ if(pv('p-reporta')==='equipo'){ h = drawDataRow('RESPONSABLE:', 'Equipo Ejecutor', y); y+=h; }
+ else { h = drawDataRow('INSTRUCTOR RESPONSABLE:', pv('p-instructor'), y); y+=h; }
  h = drawDataRow('REGIONAL/CENTRO DE FORMACIÓN/SEDE:', CENTRO, y); y+=h;
  h = drawDataRow('CIUDAD Y FECHA DEL REGISTRO:', 'Barranquilla, '+fechaLetras2(pv('p-fecha')), y); y+=h;
  h = drawDataRow('FECHA DE INICIO DEL PLAN DE MEJORAMIENTO:', fechaLetras2(pv('p-fecha-inicio')), y); y+=h;
@@ -4621,7 +4647,7 @@ window.addEventListener('load', async ()=>{
  try{
  const cached = JSON.parse(s);
  const edad = Date.now() - (cached._ts||0);
- const maxEdad = 8 * 60 * 60 * 1000; // 8 horas
+ const maxEdad = 12 * 60 * 60 * 1000; // 12 horas, igual que la sesión del servidor
  if(edad > maxEdad){
  // Sesión expirada — pedir login de nuevo
  localStorage.removeItem('sesion_cnca');
@@ -4834,7 +4860,14 @@ function generarActaDisciplinariaPDF(V){
   let y = TOP;
 
   // ── Utilidades de texto ──
-  const fillVars = (t, extra) => t.replace(/\{\{(\w+)\}\}/g, (m,k) => {
+  // Si reporta el Equipo Ejecutor, el acta no habla en primera persona de un instructor
+  const EQUIPO_TXT = {
+    ', y mi persona, {{INSTRUCTOR}}, {{INSTRUCTOR_ROL}} del ': ', y el Equipo Ejecutor del ',
+    'área temática de {{AREA}}': 'programa {{PROGRAMA}}',
+    'INSTRUCTOR': 'EQUIPO EJECUTOR',
+    'El aprendiz y el instructor concertaron las actividades de ': 'El aprendiz y el Equipo Ejecutor concertaron las actividades de '
+  };
+  const fillVars = (t, extra) => (V.EQUIPO && EQUIPO_TXT[t] !== undefined ? EQUIPO_TXT[t] : t).replace(/\{\{(\w+)\}\}/g, (m,k) => {
     const v = (extra && k in extra) ? extra[k] : V[k];
     return v == null ? '' : String(v);
   });
@@ -5188,7 +5221,7 @@ function dValidate(n){
  const req = {
   1: [['d-nombre','Nombre del aprendiz'],['d-documento','Número de documento'],['d-ficha','Ficha'],['d-grupo','Grupo'],['d-programa','Programa de formación']],
   2: [['d-fecha','Fecha de la reunión'],['d-hora-inicio','Hora de inicio'],['d-ambiente','Ambiente de formación']],
-  3: [['d-instructor','Instructor'],['d-area','Área temática'],['d-coordinador','Coordinador académico']],
+  3: [['d-instructor','Instructor'],['d-area','Área temática'],['d-coordinador','Coordinador académico']].filter(c => !(esEquipoDisc() && (c[0]==='d-instructor' || c[0]==='d-area'))),
   4: [['d-faltas','Faltas disciplinarias']]
  };
  for(const [id,lbl] of (req[n]||[])){
@@ -5245,7 +5278,7 @@ async function prepararRevisionDisc(){
    ${fila('Fecha', fechaLargaDisc(ini))}${fila('Hora', horaAmPm(g('d-hora-inicio'))+(g('d-hora-fin')?' a '+horaAmPm(g('d-hora-fin')):''))}
    ${fila('Ambiente', g('d-ambiente'))}${fila('Plazo del plan', 'Hasta el '+fechaLargaDisc(fechaISOmas(ini,20)))}</div>
   <div class="preview-box"><h3>Responsables</h3>
-   ${fila('Instructor', g('d-instructor')+' ('+rolInstructorDisc(g('d-instructor'))+')')}${fila('Área temática', g('d-area'))}${fila('Coordinador', g('d-coordinador'))}</div>
+   ${esEquipoDisc() ? fila('Reporta', 'Equipo Ejecutor') : fila('Instructor', g('d-instructor')+' ('+rolInstructorDisc(g('d-instructor'))+')')+fila('Área temática', g('d-area'))}${fila('Coordinador', g('d-coordinador'))}</div>
   <div class="preview-box"><h3>Faltas y actividades</h3>
    ${fila('Faltas', g('d-faltas'))}
    ${actividadesDisc.map((a,i) => fila('Actividad '+(i+1), a.desc.trim()+' — '+(a.permanente ? 'En las jornadas formativas' : fechaLargaDisc(a.fecha)))).join('')}</div>`;
@@ -5265,9 +5298,13 @@ function fechaISOmas(iso, dias){
  return f.getFullYear() + '-' + String(f.getMonth()+1).padStart(2,'0') + '-' + String(f.getDate()).padStart(2,'0');
 }
 // El instructor del acta es el usuario que tiene la sesión abierta
+function esEquipoDisc(){ return document.getElementById('d-reporta')?.value === 'equipo'; }
 function aplicarInstructorSesionDisc(){
- const nombre = (sesionActual && sesionActual.usuario !== 'admin') ? String(sesionActual.nombre||'').trim() : '';
+ const nombre = nombrePerfil();
  const man = document.getElementById('d-instructor-manual'), ses = document.getElementById('d-instructor-sesion');
+ const area = document.getElementById('d-area')?.closest('.field');
+ if(esEquipoDisc()){ man.style.display = 'none'; ses.style.display = 'none'; if(area) area.style.display = 'none'; return; }
+ if(area) area.style.display = '';
  if(nombre){
   document.getElementById('d-instructor').value = nombre;
   document.getElementById('d-instructor-sesion-nombre').textContent = nombre;
@@ -5412,8 +5449,9 @@ async function descargarActaDisciplinaria(){
    PROGRAMA: programa,
    FALTAS: faltas,
    AMBIENTE: g('d-ambiente'),
-   INSTRUCTOR: g('d-instructor'),
-   INSTRUCTOR_MAYUS: g('d-instructor').toUpperCase(),
+   EQUIPO: esEquipoDisc(),
+   INSTRUCTOR: esEquipoDisc() ? 'Equipo Ejecutor' : g('d-instructor'),
+   INSTRUCTOR_MAYUS: esEquipoDisc() ? 'EQUIPO EJECUTOR' : g('d-instructor').toUpperCase(),
    INSTRUCTOR_ROL: rolInstructorDisc(g('d-instructor')),
    AREA: g('d-area'),
    COORDINADOR_MAYUS: g('d-coordinador').toUpperCase(),
@@ -5432,7 +5470,7 @@ async function descargarActaDisciplinaria(){
     usuario_id: sesionActual.id, nombre_usuario: sesionActual.nombre,
     tipo_documento:'plan', tipo_llamado:'disciplinario', numero_llamado: numActa,
     nombre_aprendiz: nombre, documento_aprendiz: g('d-documento'), ficha: g('d-ficha'), programa: g('d-programa'),
-    falta: faltas, fecha_documento: ini, quien_reporta: g('d-instructor'),
+    falta: faltas, fecha_documento: ini, quien_reporta: esEquipoDisc() ? 'Equipo Ejecutor' : g('d-instructor'),
     fecha_generacion: new Date().toISOString(), dispositivo: navigator.userAgent.substring(0,100)
    })});
   if(!r.ok) throw new Error('No se pudo registrar el acta en la plataforma');
