@@ -5492,7 +5492,13 @@ async function fxAlIniciar(){
  }
 }
 const FX_SVG_CAMPANA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+// ── Herramientas EN DESARROLLO: Registro de inasistencia, Fichas del programa y el selector
+// "Elegir de mis fichas" en llamados y planes. Para habilitarlas de nuevo basta con poner false.
+const FX_EN_DESARROLLO = true;
+function fxAvisoDesarrollo(){ alert('Esta herramienta está en desarrollo. Pronto estará disponible.'); }
+const FX_BADGE_DESARROLLO = '<span class="menu-badge" style="background:#fff3cd;color:#8a6d00;margin-left:6px;vertical-align:middle;">En desarrollo</span>';
 function fxPonerCampanas(){
+ if(FX_EN_DESARROLLO) return;
  const crear = () => { const b = document.createElement('button'); b.type = 'button'; b.className = 'fx-campana'; b.setAttribute('data-fx-campana',''); b.title = 'Notificaciones'; b.innerHTML = FX_SVG_CAMPANA + '<span class="fx-badge"></span>'; b.onclick = () => fxAbrir('alertas'); return b; };
  const bs = document.querySelector('#barra-sesion .bs-acciones');
  if(bs && !bs.querySelector('[data-fx-campana]')) bs.insertBefore(crear(), bs.firstChild);
@@ -5515,22 +5521,22 @@ function fxPintarTarjetaHome(){
  if(!mias){
   mias = document.createElement('div');
   mias.id = 'fx-card-home';
-  mias.className = 'menu-card disponible';
-  mias.onclick = () => fxAbrir('asis');
-  grid.insertBefore(mias, grid.firstChild);
+  mias.className = FX_EN_DESARROLLO ? 'menu-card pronto' : 'menu-card disponible';
+  mias.onclick = () => FX_EN_DESARROLLO ? fxAvisoDesarrollo() : fxAbrir('asis');
+  if(FX_EN_DESARROLLO) grid.appendChild(mias); else grid.insertBefore(mias, grid.firstChild);
  }
- mias.innerHTML = `<div class="menu-info"><h3>Registro de inasistencia</h3><p>Registra las inasistencias de tus fichas. Desde aquí también asocias las fichas de tu horario</p></div><span class="menu-arrow">›</span>`;
+ mias.innerHTML = `<div class="menu-info"><h3>Registro de inasistencia${FX_EN_DESARROLLO?FX_BADGE_DESARROLLO:''}</h3><p>Registra las inasistencias de tus fichas. Desde aquí también asocias las fichas de tu horario</p></div><span class="menu-arrow">›</span>`;
  // Tarjeta adicional solo para líderes y administradores: cargar fichas del programa
  let prog = document.getElementById('fx-card-programa');
  if(fxEsLider() || fxEsAdmin()){
   if(!prog){
    prog = document.createElement('div');
    prog.id = 'fx-card-programa';
-   prog.className = 'menu-card disponible';
-   prog.onclick = () => fxAbrir('cargar');
+   prog.className = FX_EN_DESARROLLO ? 'menu-card pronto' : 'menu-card disponible';
+   prog.onclick = () => FX_EN_DESARROLLO ? fxAvisoDesarrollo() : fxAbrir('cargar');
    mias.after(prog);
   }
-  prog.innerHTML = `<div class="menu-info"><h3>Fichas del programa</h3><p>Carga los Reportes de Juicios, pon el nombre del grupo y elimina fichas al cambiar de trimestre</p></div><span class="menu-arrow">›</span>`;
+  prog.innerHTML = `<div class="menu-info"><h3>Fichas del programa${FX_EN_DESARROLLO?FX_BADGE_DESARROLLO:''}</h3><p>Carga los Reportes de Juicios, pon el nombre del grupo y elimina fichas al cambiar de trimestre</p></div><span class="menu-arrow">›</span>`;
  } else if(prog) prog.remove();
 }
 function fxPintarBotonAdmin(){
@@ -5547,9 +5553,10 @@ function fxPintarBotonAdmin(){
  const m = document.createElement('button');
  m.id = 'fx-btn-admin-mias';
  m.className = 'adm-opt';
- m.onclick = () => fxAbrir('asis');
+ m.onclick = () => FX_EN_DESARROLLO ? fxAvisoDesarrollo() : fxAbrir('asis');
+ if(FX_EN_DESARROLLO) m.style.opacity = '0.6';
  m.style.cssText = b.style.cssText;
- m.innerHTML = `<span style="font-size:24px;"></span><div style="flex:1;"><div id="fx-adm-asis-tit" style="font-size:15px;font-weight:600;color:#1a1a1a;">Registro de inasistencia</div><div style="font-size:12px;color:#666;">Inasistencias y mis fichas</div></div><span style="color:#1565c0;font-size:18px;">›</span>`;
+ m.innerHTML = `<span style="font-size:24px;"></span><div style="flex:1;"><div id="fx-adm-asis-tit" style="font-size:15px;font-weight:600;color:#1a1a1a;">Registro de inasistencia${FX_EN_DESARROLLO?FX_BADGE_DESARROLLO:''}</div><div style="font-size:12px;color:#666;">Inasistencias y mis fichas</div></div><span style="color:#1565c0;font-size:18px;">›</span>`;
  ref.parentNode.insertBefore(m, b);
 }
 
@@ -6292,6 +6299,7 @@ async function fxVistoHasta(){
  return (r&&r[0]) ? r[0].visto_hasta : '1970-01-01T00:00:00Z';
 }
 async function fxContarAlertas(){
+ if(FX_EN_DESARROLLO){ FX.nAlertas = 0; return; }
  try{
   const mapa = await fxNumerosAlerta();
   const nums = Object.keys(mapa);
@@ -6361,6 +6369,7 @@ async function fxsMisFichas(){
 }
 async function fxsMontar(id, alElegir){
  const cont = document.getElementById(id);
+ if(FX_EN_DESARROLLO){ if(cont) cont.style.display = 'none'; FXS[id] = { fichas: [] }; return; }
  if(!cont || !sesionActual) return;
  FXS[id] = { alElegir, fichas: [], aps: [], f: null, sel: null, q: '' };
  cont.innerHTML = `<h2>Elegir de mis fichas</h2><div class="fx-muted">Cargando tus fichas...</div>`;
@@ -6377,6 +6386,7 @@ async function fxsMontar(id, alElegir){
 }
 // En los planes se ofrecen las dos opciones: usar mis fichas o cargar un Reporte de Juicios
 function fxsPrepararModos(id){
+ if(FX_EN_DESARROLLO) return;
  const sel = document.getElementById(id), rep = sel && sel.nextElementSibling;
  if(!sel || !rep || !FXS[id]) return;
  FXS[id].reporteCard = rep;
