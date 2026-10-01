@@ -4064,6 +4064,7 @@ function generarPlanPDF(){
  const GREEN_BORDER = [39,126,45];
  const GREEN_BANNER = [200,230,201];
  const GRAY_BG = [245,245,245];
+ const AZUL_ETIQ = [222,235,247]; // azul pastel suave para las etiquetas del encabezado
  const tipoPlan = document.getElementById('p-tipo-plan')?.value || 'academico';
  const tituloTipoPlan = tipoPlan==='disciplinario' ? 'DISCIPLINARIO' : 'ACADÉMICO';
 
@@ -4110,9 +4111,10 @@ function generarPlanPDF(){
    const valLines = doc2.splitTextToSize(value||'', col2p-5);
    const nLin = Math.max(labLines.length, valLines.length);
    const totalH = Math.max(rowH2, nLin*LINE_H2 + 3);
-   doc2.setFillColor(255,255,255);
    doc2.setDrawColor(...BORDE); doc2.setLineWidth(0.3);
+   doc2.setFillColor(...AZUL_ETIQ);
    doc2.rect(ml, rowY, col1p, totalH, 'FD');
+   doc2.setFillColor(255,255,255);
    doc2.rect(ml+col1p, rowY, col2p, totalH, 'FD');
    doc2.setTextColor(0,0,0);
    doc2.setFont('helvetica','bold');
@@ -4131,10 +4133,12 @@ function generarPlanPDF(){
  h2r=drawDataRow('Nombre del aprendiz:', (pv('p-nombre')||'').toUpperCase(), y); y+=h2r;
  // Fila documento + ficha
  const docLabelW = col1p, fichaLabelWp = 14, fichaValWp = 30, docValW = cw - docLabelW - fichaLabelWp - fichaValWp;
- doc2.setFillColor(255,255,255); doc2.setDrawColor(...BORDE); doc2.setLineWidth(0.3);
+ doc2.setDrawColor(...BORDE); doc2.setLineWidth(0.3);
+ doc2.setFillColor(...AZUL_ETIQ);
  doc2.rect(ml, y, docLabelW, rowH2, 'FD');
- doc2.rect(ml+docLabelW, y, docValW, rowH2, 'FD');
  doc2.rect(ml+docLabelW+docValW, y, fichaLabelWp, rowH2, 'FD');
+ doc2.setFillColor(255,255,255);
+ doc2.rect(ml+docLabelW, y, docValW, rowH2, 'FD');
  doc2.rect(ml+docLabelW+docValW+fichaLabelWp, y, fichaValWp, rowH2, 'FD');
  doc2.setFontSize(9.5); doc2.setTextColor(0,0,0);
  doc2.setFont('helvetica','bold');
@@ -4145,7 +4149,6 @@ function generarPlanPDF(){
  doc2.text(pv('p-ficha')||'', ml+docLabelW+docValW+fichaLabelWp+2, y+4.8);
  y+=rowH2;
  h2r=drawDataRow('Programa de formación:', pv('p-programa')||'', y); y+=h2r;
- h2r=drawDataRow('Ciudad y fecha:', 'Barranquilla, '+fechaLetras2b(pv('p-fecha')), y); y+=h2r;
 
  doc2.setTextColor(0,0,0); doc2.setFont('helvetica','normal'); doc2.setFontSize(10);
 
@@ -4213,17 +4216,18 @@ function generarPlanPDF(){
  }
 
  let h;
- h = drawDataRow('CIUDAD Y FECHA:', 'Barranquilla, '+fechaLetras2(pv('p-fecha')), y); y+=h;
  h = drawDataRow('FICHA/GRUPO:', pv('p-ficha'), y); y+=h;
  h = drawDataRow('INSTRUCTOR RESPONSABLE:', pv('p-instructor'), y); y+=h;
  h = drawDataRow('REGIONAL/CENTRO DE FORMACIÓN/SEDE:', CENTRO, y); y+=h;
+ h = drawDataRow('CIUDAD Y FECHA:', 'Barranquilla, '+fechaLetras2(pv('p-fecha')), y); y+=h;
  h = drawDataRow('FECHA DE INICIO DEL PLAN DE MEJORAMIENTO:', fechaLetras2(pv('p-fecha-inicio')), y); y+=h;
  h = drawDataRow('FECHA DE TERMINACIÓN DEL PLAN DE MEJORAMIENTO:', fechaLetras2(pv('p-fecha-fin')), y); y+=h;
 
  // Borde exterior ÚNICO que envuelve TODO el encabezado completo
  doc2.setDrawColor(180,180,180); doc2.setLineWidth(0.3);
  doc2.rect(ml, yInicioBloque, cw, y - yInicioBloque, 'S');
- y+=6;
+ const SEP_BLOQUES = 8; // separación entre bloques del documento
+ y+=SEP_BLOQUES;
 
  // Texto legal — párrafo 1
  const txtLegal1 = 'El presente Plan de Mejoramiento se formula con fundamento en el Artículo 46, Tipos de medidas formativas, del Acuerdo 009 de 2024, por el cual se adopta el Reglamento del Aprendiz SENA. Según esta norma, el plan de mejoramiento es una medida formativa de carácter académico cuya finalidad es garantizar el logro de los resultados de aprendizaje que no han sido alcanzados. Procede una vez se han agotado los dos (2) llamados de atención académicos realizados previamente al aprendiz. En atención a ello, este plan tiene como objetivo establecer un conjunto de actividades, con sus respectivas evidencias y criterios de evaluación, que le permitan alcanzar los resultados de aprendizaje pendientes.';
@@ -4268,10 +4272,10 @@ function generarPlanPDF(){
 
  // Todos los párrafos en un solo recuadro, sin líneas entre ellos
  y = drawBloqueParrafos(parrafos, y);
- y+=3;
+ y+=SEP_BLOQUES;
 
- // Sección 2 — solo competencias SELECCIONADAS
- if(y > PAGE_BOTTOM-55){ y = nuevaPagina(); }
+ // Sección 2 — solo competencias SELECCIONADAS (título, encabezado y al menos una fila juntos)
+ if(y > PAGE_BOTTOM-35){ y = nuevaPagina(); }
  h = drawRow(['2. INFORMACIÓN DEL PROGRAMA DE FORMACIÓN'], [cw], y, true); y+=h;
  const w3=[cw*0.30, cw*0.45, cw*0.25];
  h = drawRow(['COMPETENCIA','RESULTADO DE APRENDIZAJE','CONOCIMIENTO'], w3, y, true); y+=h;
@@ -4283,10 +4287,10 @@ function generarPlanPDF(){
  h = drawRow([c.comp||'', c.ra||'', c.conocimiento||''], w3, y, false); y+=h;
  });
  }
- y+=3;
+ y+=SEP_BLOQUES;
 
- // Sección 3
- if(y > PAGE_BOTTOM-55){ y = nuevaPagina(); }
+ // Sección 3 (título, encabezado y al menos una fila juntos)
+ if(y > PAGE_BOTTOM-35){ y = nuevaPagina(); }
  h = drawRow(['3. DESCRIPCIÓN DE ACTIVIDADES Y EVIDENCIAS'], [cw], y, true); y+=h;
  const w4=[cw*0.35, cw*0.35, cw*0.30];
  h = drawRow(['ACTIVIDAD DE MEJORAMIENTO','DESCRIPCIÓN DE LA ACTIVIDAD','EVIDENCIA'], w4, y, true); y+=h;
@@ -4295,10 +4299,19 @@ function generarPlanPDF(){
    const descConFecha = (a.descripcion||'').trim() + (fEnt ? ((a.descripcion||'').trim() ? '\n\n' : '') + 'Fecha de entrega: ' + fechaLetras2(fEnt) + '.' : '');
    h = drawRow([a.actividad||'', descConFecha, a.evidencia||''], w4, y, false); y+=h;
  });
- y+=3;
+ y+=SEP_BLOQUES;
 
- // Sección 4
- if(y > PAGE_BOTTOM-55){ y = nuevaPagina(); }
+ // Sección 4 — el título no se separa de sus observaciones
+ {
+  doc2.setFontSize(9.5); doc2.setFont('helvetica','normal');
+  const altoObs = 7 + [
+   'Esta medida tiene un carácter formativo y correctivo; por ello, se espera el compromiso del aprendiz con la entrega oportuna de las evidencias, en las fechas establecidas en el presente documento, y con el cumplimiento de los criterios de evaluación.',
+   'De no cumplirse lo establecido, el caso será remitido al Comité de Evaluación y Seguimiento, instancia que sugerirá las medidas sancionatorias a aplicar conforme a lo previsto en el Reglamento del Aprendiz.',
+   'La ejecución se llevará a cabo en el plazo establecido por el instructor o el Equipo Ejecutor, sin exceder veinte (20) días calendario contados a partir de la fecha de suscripción del Plan de Mejoramiento.',
+   'El presente documento deberá ser firmado por el aprendiz y el Coordinador Académico.'
+  ].reduce((sum,t) => sum + doc2.splitTextToSize(t, cw - 10).length*4.8 + 2.5, 0);
+  if(y + 12 + altoObs > PAGE_BOTTOM){ y = nuevaPagina(); }
+ }
  h = drawRow(['4. OBSERVACIONES'], [cw], y, true); y+=h;
  // Observaciones con viñetas
  const obsItems = [
