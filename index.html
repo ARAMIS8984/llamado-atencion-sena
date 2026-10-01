@@ -3757,6 +3757,16 @@ function pValidate(n){
  const el=document.getElementById(id);
  if(!el||!el.value.trim()){alert('Por favor completa: '+label);el&&el.focus();return false;}
  }
+ if(n===2){
+ // El segundo párrafo del plan siempre parte del estilo de aprendizaje y de las técnicas didácticas
+ if(!getEstilo()){
+  alert('Selecciona el estilo de aprendizaje del aprendiz. Con él se redacta el párrafo de las técnicas didácticas del plan.');
+  const r = document.querySelector('input[name="p-estilo"]'); if(r) r.closest('label')?.scrollIntoView({behavior:'smooth', block:'center'});
+  return false;
+ }
+ const t = document.getElementById('p-tecnicas');
+ if(t && !t.value.trim()){ alert('Describe las técnicas didácticas que se aplicarán.'); t.focus(); return false; }
+ }
  if(n===4){
  const ini=pv('p-fecha-inicio'), fin=pv('p-fecha-fin');
  for(let i=0;i<actividades.length;i++){
@@ -4181,8 +4191,33 @@ function generarPlanPDF(){
  // Sección 4
  if(y > PAGE_BOTTOM-55){ y = nuevaPagina(); }
  h = drawRow(['4. OBSERVACIONES'], [cw], y, true); y+=h;
- const obs='Teniendo en cuenta que esta medida tiene un carácter formativo y correctivo, se espera el compromiso del aprendiz con la entrega oportuna de las evidencias, en las fechas establecidas en el presente documento, y con el cumplimiento de los criterios de evaluación. De no cumplirse lo establecido, el caso será remitido al Comité de Evaluación y Seguimiento, instancia que sugerirá las medidas sancionatorias a aplicar conforme a lo previsto en el Reglamento del Aprendiz.\n\nEste documento se debe firmar por el aprendiz y el Coordinador Académico, y su ejecución se llevará a cabo en el plazo establecido por el instructor o el Equipo Ejecutor, sin exceder los veinte (20) días calendario, contados a partir de la fecha de suscripción del Plan de Mejoramiento.';
- h = drawRow([obs], [cw], y, false); y+=h;
+ // Observaciones con viñetas
+ const obsItems = [
+  'Esta medida tiene un carácter formativo y correctivo; por ello, se espera el compromiso del aprendiz con la entrega oportuna de las evidencias, en las fechas establecidas en el presente documento, y con el cumplimiento de los criterios de evaluación.',
+  'De no cumplirse lo establecido, el caso será remitido al Comité de Evaluación y Seguimiento, instancia que sugerirá las medidas sancionatorias a aplicar conforme a lo previsto en el Reglamento del Aprendiz.',
+  'La ejecución se llevará a cabo en el plazo establecido por el instructor o el Equipo Ejecutor, sin exceder veinte (20) días calendario contados a partir de la fecha de suscripción del Plan de Mejoramiento.',
+  'El presente documento deberá ser firmado por el aprendiz y el Coordinador Académico.'
+ ];
+ {
+  const PAD_X = 2.5, PAD_Y = 3.5, LINE_H = 4.8, GAP = 2.5, IND = 5;
+  doc2.setFontSize(9.5); doc2.setFont('helvetica','normal');
+  const bloques = obsItems.map(t => doc2.splitTextToSize(t, cw - PAD_X*2 - IND));
+  const alto = PAD_Y*2 + bloques.reduce((s,l) => s + l.length*LINE_H, 0) + GAP*(bloques.length-1);
+  if(y + alto > PAGE_BOTTOM){ y = nuevaPagina(); }
+  doc2.setFillColor(255,255,255); doc2.setDrawColor(...BORDE); doc2.setLineWidth(0.3);
+  doc2.rect(ml, y, cw, alto, 'FD');
+  doc2.setTextColor(...BLACK); doc2.setFillColor(...BLACK);
+  let yy = y + PAD_Y;
+  bloques.forEach((lineas, i) => {
+   lineas.forEach((linea, li) => {
+    const base = yy + LINE_H*(li+0.7);
+    if(li === 0) doc2.circle(ml + PAD_X + 1.6, base - 1.2, 0.65, 'F');
+    doc2.text(linea, ml + PAD_X + IND, base);
+   });
+   yy += lineas.length*LINE_H + (i < bloques.length-1 ? GAP : 0);
+  });
+  y += alto;
+ }
 
  // Pie final — solo en la última página
  if(y + 25 > 285){ y = nuevaPagina(); }
