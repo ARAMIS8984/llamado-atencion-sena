@@ -741,6 +741,7 @@ window.addEventListener('load', ()=>{
 
  <!-- PANEL 1 -->
  <div id="panel1" class="panel active">
+ <div class="card" id="fx-sel-llam"></div>
  <div class="card">
  <h2>Datos del aprendiz</h2>
  <div class="grid2">
@@ -825,6 +826,7 @@ window.addEventListener('load', ()=>{
  <div id="panel4" class="panel">
  <div class="card">
  <h2>Número de llamado</h2>
+ <div id="fx-hint-numero" class="info-card" style="display:none;"></div>
  <div class="opcion-grid">
  <div class="opcion-card" onclick="selectNumero('primero')" id="nc-primero">
  <div class="oc-icon">1⃣</div>
@@ -6216,6 +6218,148 @@ async function fxMarcarRevisadas(){
   FX.nAlertas = 0; fxIrTab('alertas'); fxContarAlertas();
  }catch(e){ alert('No se pudo actualizar: '+e.message); }
 }
+
+
+// ═══ SELECTOR "ELEGIR DE MIS FICHAS" (llamados de atención y planes de mejoramiento) ═══
+// Cada instructor ve SOLO las fichas asociadas a su perfil.
+const FXS = {};
+async function fxsMisFichas(){
+ const r = await fxReq(`instructor_fichas?usuario_id=eq.${sesionActual.id}&select=ficha_id,fichas(id,numero,grupo,programa)`);
+ return (r||[]).map(x => x.fichas).filter(Boolean).sort((a,b) => (a.programa||'').localeCompare(b.programa||'','es') || String(a.numero).localeCompare(String(b.numero)));
+}
+async function fxsMontar(id, alElegir){
+ const cont = document.getElementById(id);
+ if(!cont || !sesionActual) return;
+ FXS[id] = { alElegir, fichas: [], aps: [], f: null, sel: null, q: '' };
+ cont.innerHTML = `<h2>Elegir de mis fichas</h2><div class="fx-muted">Cargando tus fichas...</div>`;
+ try{
+  const fichas = await fxsMisFichas();
+  FXS[id].fichas = fichas;
+  if(!fichas.length){
+   cont.innerHTML = `<h2>Elegir de mis fichas</h2>
+    <div class="fx-aviso" style="margin:0;">No tienes fichas asociadas a tu perfil. Asócialas en <b>Registro de asistencia → Mis fichas</b> y aquí podrás elegir el aprendiz. Mientras tanto, escribe los datos abajo.</div>`;
+   return;
+  }
+  fxsPintar(id);
+ }catch(e){ cont.innerHTML = `<h2>Elegir de mis fichas</h2><div class="fx-aviso fx-err" style="margin:0;">No se pudieron cargar tus fichas. Puedes escribir los datos abajo.</div>`; }
+}
+function fxsPintar(id){
+ const S = FXS[id], cont = document.getElementById(id);
+ if(S.sel){
+  const a = S.sel;
+  cont.innerHTML = `<h2>Elegir de mis fichas</h2>
+   <div style="display:flex;align-items:center;gap:10px;background:#f3faf1;border:1px solid #cfe5c8;border-radius:10px;padding:10px 12px;">
+    <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14px;">${fxEsc(fxNombreApr(a).toUpperCase())}</div>
+     <div class="fx-muted">${fxEsc(a.tipo_doc||'')} ${fxEsc(a.documento)} · Ficha ${fxEtiqueta(S.f)}</div>${fxsResumen(a)}</div>
+    <button type="button" class="fx-btn fx-btn-s fx-btn-sm" onclick="FXS['${id}'].sel=null;fxsPintar('${id}')">Cambiar</button></div>
+   <div class="fx-muted" style="margin-top:6px;">Los datos del aprendiz y de la formación ya quedaron llenos.</div>`;
+  return;
+ }
+ cont.innerHTML = `<h2>Elegir de mis fichas</h2>
+  <div class="field" style="margin-bottom:10px;"><label>Ficha</label>
+   <select onchange="fxsElegirFicha('${id}', this.value)"><option value="">Seleccionar ficha...</option>
+    ${S.fichas.map(f => `<option value="${f.id}" ${S.f&&S.f.id===f.id?'selected':''}>${fxEsc(f.numero)}${f.grupo?' – '+fxEsc(f.grupo):''}</option>`).join('')}</select></div>
+  <div id="${id}-aps"></div>
+  <div class="fx-muted" style="margin-top:4px;">¿El aprendiz no está en la lista? Escribe sus datos abajo.</div>`;
+ if(S.f) fxsPintarAprendices(id);
+}
+async function fxsElegirFicha(id, fid){
+ const S = FXS[id];
+ S.f = S.fichas.find(f => f.id===fid) || null; S.aps = []; S.q = '';
+ const box = document.getElementById(id+'-aps');
+ if(!S.f){ box.innerHTML = ''; return; }
+ box.innerHTML = '<div class="fx-muted">Cargando aprendices...</div>';
+ try{
+  const num = encodeURIComponent(S.f.numero);
+  const [aps, ina, hist] = await Promise.all([
+   fxReq(`aprendices?ficha_id=eq.${S.f.id}&select=documento,tipo_doc,nombres,apellidos&order=apellidos.asc,nombres.asc`),
+   fxReq(`inasistencias?ficha_numero=eq.${num}&select=documento`),
+   fxReq(`historial_documentos?ficha=eq.${num}&select=documento_aprendiz,tipo_documento,tipo_llamado,numero_llamado,fecha_documento&order=fecha_documento.asc`)
+  ]);
+  const nIna = {}; (ina||[]).forEach(x => nIna[x.documento] = (nIna[x.documento]||0)+1);
+  const docs = {}; (hist||[]).forEach(h => { const d = String(h.documento_aprendiz||'').replace(/[^0-9A-Za-z]/g,''); (docs[d] = docs[d]||[]).push(h); });
+  S.aps = (aps||[]).map(a => ({...a, nIna: nIna[a.documento]||0, docs: docs[a.documento]||[]}));
+  fxsPintarAprendices(id);
+ }catch(e){ box.innerHTML = `<div class="fx-aviso fx-err">${fxEsc(e.message)}</div>`; }
+}
+function fxsResumen(a){
+ const ll = a.docs.filter(d => d.tipo_documento==='llamado');
+ const pl = a.docs.filter(d => d.tipo_documento==='plan');
+ const p = [];
+ if(a.nIna) p.push(`<span style="color:${a.nIna>=3?'#c0392b':'#7a5a00'};font-weight:600;">${a.nIna} inasistencia${a.nIna!==1?'s':''}</span>`);
+ if(ll.length) p.push(`<span style="color:#7a5a00;font-weight:600;">${ll.length} llamado${ll.length!==1?'s':''}</span>`);
+ if(pl.length) p.push(`<span style="color:#7a5a00;font-weight:600;">${pl.length} plan${pl.length!==1?'es':''}</span>`);
+ return p.length ? `<div class="fx-muted" style="margin-top:2px;">${p.join(' · ')}</div>` : '';
+}
+function fxsPintarAprendices(id){
+ const S = FXS[id], box = document.getElementById(id+'-aps');
+ if(!box) return;
+ const q = fxNorm(S.q);
+ const lista = S.aps.filter(a => !q || fxNorm(fxNombreApr(a)+' '+a.documento).includes(q));
+ box.innerHTML = `<div class="field" style="margin-bottom:8px;"><label>Aprendiz (${S.aps.length})</label>
+   <input type="text" placeholder="Buscar por nombre o documento" value="${fxEsc(S.q)}" oninput="FXS['${id}'].q=this.value;fxsPintarLista('${id}')"></div>
+  <div id="${id}-lista" style="max-height:300px;overflow-y:auto;border:1px solid #e2e8e0;border-radius:10px;"></div>`;
+ fxsPintarLista(id);
+}
+function fxsPintarLista(id){
+ const S = FXS[id], el = document.getElementById(id+'-lista');
+ if(!el) return;
+ const q = fxNorm(S.q);
+ const lista = S.aps.filter(a => !q || fxNorm(fxNombreApr(a)+' '+a.documento).includes(q));
+ el.innerHTML = lista.length ? lista.map(a => `<div onclick="fxsElegir('${id}','${fxEsc(a.documento)}')" style="padding:10px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;">
+   <div style="font-weight:600;font-size:13px;">${fxEsc(fxNombreApr(a).toUpperCase())}</div>
+   <div class="fx-muted">${fxEsc(a.tipo_doc||'')} ${fxEsc(a.documento)}</div>${fxsResumen(a)}</div>`).join('')
+  : '<div class="fx-muted" style="padding:12px;">No hay aprendices que coincidan.</div>';
+}
+function fxsElegir(id, doc){
+ const S = FXS[id];
+ const a = S.aps.find(x => x.documento===doc);
+ if(!a) return;
+ S.sel = a;
+ fxsPintar(id);
+ try{ S.alElegir(a, S.f); }catch(e){ console.error(e); }
+}
+function fxsPonerPrograma(selId, programa){
+ const sel = document.getElementById(selId);
+ if(!sel || !programa) return;
+ const op = [...sel.options].find(o => (o.value||o.textContent).trim()===programa) || [...sel.options].find(o => o.value && fxMatchPrograma(programa)===o.value);
+ if(op){ sel.value = op.value; return; }
+ const o = document.createElement('option'); o.value = programa; o.textContent = programa; sel.appendChild(o); sel.value = programa;
+}
+
+// ── Llamados de atención ──
+const FX_TXT_TIPO = {disciplinario:'disciplinario', academico:'académico'};
+function fxHintNumeroLlamado(){
+ const box = document.getElementById('fx-hint-numero');
+ const S = FXS['fx-sel-llam'];
+ if(!box) return;
+ if(!S || !S.sel || !tipoLlamado){ box.style.display = 'none'; return; }
+ const prev = S.sel.docs.filter(d => d.tipo_documento==='llamado' && d.tipo_llamado===tipoLlamado);
+ const t = FX_TXT_TIPO[tipoLlamado] || tipoLlamado;
+ let msg;
+ if(!prev.length) msg = `No tiene llamados de atención ${t}s registrados en la plataforma: corresponde el <b>primer llamado</b>.`;
+ else if(prev.length===1) msg = `Ya tiene 1 llamado ${t} registrado en la plataforma (${prev[0].fecha_documento?fxFechaCorta(prev[0].fecha_documento):''}): corresponde el <b>segundo llamado</b>.`;
+ else msg = `Ya tiene ${prev.length} llamados ${t}s registrados en la plataforma. Revisa si corresponde un <b>plan de mejoramiento</b>.`;
+ box.innerHTML = msg; box.style.display = 'block';
+}
+(function(){
+ const abrirOrig = abrirHerramienta;
+ abrirHerramienta = function(id){
+  const r = abrirOrig.apply(this, arguments);
+  if(id==='llamados'){
+   fxsMontar('fx-sel-llam', (a, f) => {
+    document.getElementById('nombreAprendiz').value = fxNombreApr(a).toUpperCase();
+    const d = document.getElementById('documento'); if(d) d.value = String(a.documento).replace(/[^0-9]/g,'');
+    document.getElementById('ficha').value = f.numero;
+    fxsPonerPrograma('programa', f.programa);
+    fxHintNumeroLlamado();
+   });
+  }
+  return r;
+ };
+ const tipoOrig = selectTipo;
+ selectTipo = function(){ const r = tipoOrig.apply(this, arguments); fxHintNumeroLlamado(); return r; };
+})();
 
 // ── Enganche con el inicio de sesión existente ──
 (function(){
